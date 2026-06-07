@@ -2,16 +2,17 @@ import { createClient } from "@/lib/supabase/server";
 import { Suspense } from "react";
 
 async function UserData() {
-  const supabase = await createClient();
-  const { data: users } = await supabase.from("users").select();
+	const supabase = await createClient();
+	const { data: Users } = await supabase.from("Users").select();
+	console.log({ data: Users })
 
-  return <pre>{JSON.stringify(users, null, 2)}</pre>;
+  	return <pre>{JSON.stringify(Users, null, 2)}</pre>;
 }
 
 export default function Users() {
-  return (
-    <Suspense fallback={<div>Loading user data...</div>}>
-      <UserData />
-    </Suspense>
-  );
+	return (
+		<Suspense fallback={<div>Loading user data...</div>}>
+		<UserData />
+		</Suspense>
+	);
 }
