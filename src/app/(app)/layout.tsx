@@ -6,9 +6,10 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // const supabase = await createClient();
-  // const { data } = await supabase.auth.getClaims();
-  // if (!data?.claims) redirect("/login");
+  const supabase = await createClient();
+  const { data } = await supabase.auth.getClaims();
+
+//   if (!data?.claims) redirect("/login");
 
   return (
     <div className="flex min-h-screen">
