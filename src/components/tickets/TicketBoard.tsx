@@ -262,6 +262,7 @@ export default function TicketBoard({
 
       {/* Kanban columns */}
       <DndContext
+        id="ticket-board-dnd"
         sensors={sensors}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}

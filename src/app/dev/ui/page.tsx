@@ -2,6 +2,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Hanken_Grotesk } from 'next/font/google'
+import TicketsShowcase from './TicketsShowcase'
 
 const hanken = Hanken_Grotesk({ subsets: ['latin'], weight: ['400', '500', '600', '700'] })
 
@@ -34,7 +35,7 @@ export default function UIPage() {
           <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">Internal</p>
           <h1 className="text-2xl font-semibold text-gray-900">Component Library</h1>
           <p className="text-sm text-gray-400 mt-1">
-            All reusable UI primitives — <code className="bg-gray-100 px-1 rounded">src/components/ui/</code>
+            UI primitives from <code className="bg-gray-100 px-1 rounded">src/components/ui/</code> and ticket components from <code className="bg-gray-100 px-1 rounded">src/components/tickets/</code>
           </p>
         </div>
 
@@ -96,6 +97,17 @@ export default function UIPage() {
             </div>
           </Row>
         </Section>
+
+        {/* ─────────────────────────────────────────────────────────────────── */}
+        <div className="mb-12">
+          <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">Ticket Components</p>
+          <h2 className="text-xl font-semibold text-gray-900">Tickets</h2>
+          <p className="text-sm text-gray-400 mt-1">
+            Kanban board and its sub-components — <code className="bg-gray-100 px-1 rounded">src/components/tickets/</code>
+          </p>
+        </div>
+
+        <TicketsShowcase />
 
       </div>
     </div>
