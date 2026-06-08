@@ -20,7 +20,7 @@ export default function LoginPage() {
 
   const handleSignIn = (e: React.FormEvent) => {
     e.preventDefault()
-    router.push('/projects/demo/structure')
+    router.push('/projects/demo/workflows/sprint-1/tickets')
   }
 
   return (
