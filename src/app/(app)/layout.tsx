@@ -9,7 +9,7 @@ export default async function AppLayout({
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
 
-  if (!data?.claims) redirect("/login");
+//   if (!data?.claims) redirect("/login");
 
   return (
     <div className="flex min-h-screen">
