@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useRef, useEffect } from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { Ticket } from './types';
 
@@ -81,22 +82,82 @@ function MoreHorizontalIcon({ className = '' }: { className?: string }) {
   );
 }
 
+// ── Delete Confirmation Modal ────────────────────────────────────────────────
+
+interface DeleteModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  ticketTitle: string;
+}
+
+function DeleteConfirmationModal({ isOpen, onClose, onConfirm, ticketTitle }: DeleteModalProps) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+      <div 
+        className="bg-white rounded-xl max-w-sm w-full p-6 shadow-xl border border-gray-100 animate-in fade-in zoom-in-95 duration-150"
+        onClick={(e) => e.stopPropagation()} 
+      >
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete Ticket?</h3>
+        <p className="text-sm text-gray-500 mb-6">
+          Are you sure you want to delete <span className="font-medium text-gray-700">"{ticketTitle}"</span>? This action cannot be undone.
+        </p>
+        <div className="flex items-center justify-end gap-3">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Card content (pure presentation, no DnD) ─────────────────────────────────
 
 interface CardContentProps {
   ticket: Ticket;
   onSelect: (ticket: Ticket) => void;
+  onEdit: (ticket: Ticket) => void;
+  onDelete: (ticketId: string) => void;
 }
 
-export function TicketCardContent({ ticket, onSelect }: CardContentProps) {
+export function TicketCardContent({ ticket, onSelect, onEdit, onDelete }: CardContentProps) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
   const completedSubtasks = ticket.subtasks?.filter((s) => s.completed).length ?? 0;
   const totalSubtasks = ticket.subtasks?.length ?? 0;
+
+  // Auto-close menu on outside clicks
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    if (menuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [menuOpen]);
 
   return (
     <div
       onClick={() => onSelect(ticket)}
       className={[
-        'bg-white rounded-xl p-4 border border-gray-200 cursor-pointer',
+        'bg-white rounded-xl p-4 border border-gray-200 cursor-pointer relative',
         'hover:border-gray-300 transition-colors duration-150 select-none',
         ticket.isOverdue ? 'border-l-4 border-l-red-500' : '',
       ].join(' ')}
@@ -104,7 +165,7 @@ export function TicketCardContent({ ticket, onSelect }: CardContentProps) {
       {/* Top row: ID + badges + menu */}
       <div className="flex items-center justify-between mb-2.5 gap-1">
         <span className="text-xs font-semibold text-indigo-600 shrink-0">{ticket.id}</span>
-        <div className="flex items-center gap-1.5 ml-auto">
+        <div className="flex items-center gap-1.5 ml-auto relative" ref={menuRef}>
           {ticket.isActive && (
             <span className="text-[10px] font-semibold tracking-wide text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full uppercase">
               Active
@@ -116,12 +177,43 @@ export function TicketCardContent({ ticket, onSelect }: CardContentProps) {
             </span>
           )}
           {ticket.isFlagged && <FlagIcon className="text-red-500" />}
+          
           <button
-            onClick={(e) => e.stopPropagation()}
-            className="text-gray-400 hover:text-gray-600 p-0.5 rounded transition-colors"
+            onClick={(e) => {
+              e.stopPropagation();
+              setMenuOpen(!menuOpen);
+            }}
+            className={`p-0.5 rounded transition-colors ${menuOpen ? 'text-gray-700 bg-gray-100' : 'text-gray-400 hover:text-gray-600'}`}
           >
             <MoreHorizontalIcon />
           </button>
+
+          {/* Action Menu Dropdown */}
+          {menuOpen && (
+            <div className="absolute right-0 top-full mt-1 w-32 bg-white rounded-lg border border-gray-200 shadow-lg py-1 z-30">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMenuOpen(false);
+                  onSelect(ticket);
+                  onEdit(ticket);
+                }}
+                className="w-full text-left px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50 font-medium"
+              >
+                Edit
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMenuOpen(false);
+                  setIsDeleteModalOpen(true);
+                }}
+                className="w-full text-left px-3 py-1.5 text-xs text-red-600 hover:bg-red-50 font-medium"
+              >
+                Delete
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -130,7 +222,7 @@ export function TicketCardContent({ ticket, onSelect }: CardContentProps) {
         {ticket.title}
       </p>
 
-      {/* Subtask progress (only if there are subtasks) */}
+      {/* Subtask progress */}
       {totalSubtasks > 0 && (
         <div className="flex items-center gap-1.5 mb-3">
           <div className="flex-1 h-1 bg-gray-100 rounded-full overflow-hidden">
@@ -175,6 +267,16 @@ export function TicketCardContent({ ticket, onSelect }: CardContentProps) {
           <div className="w-6 h-6 rounded-full border-2 border-dashed border-gray-200" />
         )}
       </div>
+
+      <DeleteConfirmationModal
+        isOpen={isDeleteModalOpen}
+        ticketTitle={ticket.title}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={() => {
+          setIsDeleteModalOpen(false);
+          onDelete(ticket.id);
+        }}
+      />
     </div>
   );
 }
@@ -184,9 +286,11 @@ export function TicketCardContent({ ticket, onSelect }: CardContentProps) {
 interface TicketCardProps {
   ticket: Ticket;
   onSelect: (ticket: Ticket) => void;
+  onEdit: (ticket: Ticket) => void;
+  onDelete: (ticketId: string) => void;
 }
 
-export default function TicketCard({ ticket, onSelect }: TicketCardProps) {
+export default function TicketCard({ ticket, onSelect, onEdit, onDelete }: TicketCardProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: ticket.id,
   });
@@ -208,7 +312,12 @@ export default function TicketCard({ ticket, onSelect }: TicketCardProps) {
       {...listeners}
       className="cursor-grab active:cursor-grabbing focus:outline-none"
     >
-      <TicketCardContent ticket={ticket} onSelect={onSelect} />
+      <TicketCardContent 
+        ticket={ticket} 
+        onSelect={onSelect} 
+        onEdit={onEdit} 
+        onDelete={onDelete} 
+      />
     </div>
   );
 }

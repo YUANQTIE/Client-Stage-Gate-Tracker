@@ -284,7 +284,7 @@ export default function TicketBoard({
         <DragOverlay dropAnimation={null}>
           {activeTicket ? (
             <div className="rotate-2 opacity-90">
-              <TicketCardContent ticket={activeTicket} onSelect={() => {}} />
+              <TicketCardContent ticket={activeTicket} onSelect={() => {}}  onEdit={() => {}}  onDelete={() => {}}/>
             </div>
           ) : null}
         </DragOverlay>
