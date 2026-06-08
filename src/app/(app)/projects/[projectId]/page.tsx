@@ -1,7 +1,9 @@
-export default function ProjectPage({
+export default async function ProjectPage({
   params,
 }: {
-  params: { projectId: string };
+  params: Promise<{ projectId: string }>;
 }) {
-  return <div>Project {params.projectId}</div>;
+  const resolvedParams = await params;
+  const projectId = resolvedParams.projectId;
+  return <div>Project {projectId}</div>;
 }
