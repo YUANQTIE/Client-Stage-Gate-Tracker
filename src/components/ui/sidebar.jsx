@@ -60,10 +60,10 @@ export const ChevronRight = () => (
 
 
 export const navItems = [
-  { label: "Dashboard",        icon: <LayoutDashboard /> },
+  //{ label: "Dashboard",        icon: <LayoutDashboard /> },
   { label: "Projects",         icon: <FolderIcon /> },
-  { label: "Contracts",        icon: <FileTextIcon /> },
-  { label: "Credentials Repo", icon: <KeyIcon /> },
+  //{ label: "Contracts",        icon: <FileTextIcon /> },
+  //{ label: "Credentials Repo", icon: <KeyIcon /> }, //for after sprint 1
 ];
 
 export const SidebarLogo = ({ collapsed }) => (

@@ -1,4 +1,3 @@
-// SidebarLayout.jsx — state, collapse logic, and layout structure
 "use client"
 
 import { useState } from "react";
@@ -38,20 +37,20 @@ export default function SidebarLayout({ children }) {
           ))}
         </nav>
 
-        <SidebarFooter
+        {/*<SidebarFooter
           collapsed={collapsed}
           onCollapse={() => setCollapsed(true)}
-        />
+        />*/}
 
         {/* Expand button when collapsed */}
-        {collapsed && (
+        {/*collapsed && (
           <button
             onClick={() => setCollapsed(false)}
             className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-white border border-gray-200 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-600 shadow-sm"
           >
             <ChevronRight />
           </button>
-        )}
+        )*/}
       </div>
 
       {/* Page content */}
