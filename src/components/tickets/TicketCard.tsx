@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useDraggable } from '@dnd-kit/core';
-import { Ticket } from './types';
+import { type Ticket } from "@/actions/ticketActions";
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 
@@ -132,13 +132,23 @@ interface CardContentProps {
   onDelete: (ticketId: string) => void;
 }
 
+function getInitials(name: string): string {
+  return name
+    .trim()                        // Remove trailing/leading spaces
+    .split(/\s+/)                  // Split into words by any spacing
+    .map((word) => word[0])        // Grab the first character of each word
+    .slice(0, 2)                   // Keep only the first two characters
+    .join("")                      // Combine them
+    .toUpperCase();                // Force uppercase
+}
+
 export function TicketCardContent({ ticket, onSelect, onEdit, onDelete }: CardContentProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const completedSubtasks = ticket.subtasks?.filter((s) => s.completed).length ?? 0;
-  const totalSubtasks = ticket.subtasks?.length ?? 0;
+//   const completedSubtasks = ticket.subtasks?.filter((s) => s.completed).length ?? 0;
+//   const totalSubtasks = ticket.subtasks?.length ?? 0;
 
   // Auto-close menu on outside clicks
   useEffect(() => {
@@ -159,24 +169,29 @@ export function TicketCardContent({ ticket, onSelect, onEdit, onDelete }: CardCo
       className={[
         'bg-white rounded-xl p-4 border border-gray-200 cursor-pointer relative',
         'hover:border-gray-300 transition-colors duration-150 select-none',
-        ticket.isOverdue ? 'border-l-4 border-l-red-500' : '',
+        ticket.deadline_date < new Date() ? 'border-l-4 border-l-red-500' : '',
       ].join(' ')}
     >
       {/* Top row: ID + badges + menu */}
-      <div className="flex items-center justify-between mb-2.5 gap-1">
-        <span className="text-xs font-semibold text-indigo-600 shrink-0">{ticket.id}</span>
+			
+      <div className="flex items-center justify-center mb-2.5 gap-1">
+				{/* Title */}
+				<p className="text-sm font-medium text-gray-900 leading-snug  line-clamp-2">
+					{ticket.name}
+				</p>
+        {/* <span className="text-xs font-semibold text-indigo-600 shrink-0">{ticket.ticket_id}</span> */}
         <div className="flex items-center gap-1.5 ml-auto relative" ref={menuRef}>
-          {ticket.isActive && (
+          {/* {ticket.isActive && (
             <span className="text-[10px] font-semibold tracking-wide text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full uppercase">
               Active
             </span>
-          )}
-          {ticket.isOverdue && (
+          )} */}
+          {ticket.deadline_date < new Date() && (
             <span className="text-[10px] font-semibold tracking-wide text-red-600 bg-red-50 px-2 py-0.5 rounded-full uppercase">
               Overdue
             </span>
           )}
-          {ticket.isFlagged && <FlagIcon className="text-red-500" />}
+          {/* {ticket.isFlagged && <FlagIcon className="text-red-500" />} */}
           
           <button
             onClick={(e) => {
@@ -215,15 +230,13 @@ export function TicketCardContent({ ticket, onSelect, onEdit, onDelete }: CardCo
             </div>
           )}
         </div>
+				
       </div>
 
-      {/* Title */}
-      <p className="text-sm font-medium text-gray-900 leading-snug mb-3 line-clamp-2">
-        {ticket.title}
-      </p>
+      
 
       {/* Subtask progress */}
-      {totalSubtasks > 0 && (
+      {/* {totalSubtasks > 0 && (
         <div className="flex items-center gap-1.5 mb-3">
           <div className="flex-1 h-1 bg-gray-100 rounded-full overflow-hidden">
             <div
@@ -235,46 +248,50 @@ export function TicketCardContent({ ticket, onSelect, onEdit, onDelete }: CardCo
             {completedSubtasks}/{totalSubtasks}
           </span>
         </div>
-      )}
+      )} */}
 
       {/* Bottom row: deadline + assignee avatar */}
-      <div className="flex items-center justify-between">
-        {ticket.deadline ? (
+      { <div className="flex items-center justify-between">
+        {ticket.deadline_date ? (
           <div
             className={`flex items-center gap-1 text-xs font-medium ${
-              ticket.isOverdue ? 'text-red-500' : 'text-gray-400'
+              ticket.deadline_date < new Date() ? 'text-red-500' : 'text-gray-400'
             }`}
           >
-            {ticket.isOverdue ? (
+            {ticket.deadline_date < new Date() ? (
               <AlertTriangleIcon className="text-red-500" />
             ) : (
               <CalendarIcon />
             )}
-            {ticket.deadline}
+            {ticket.deadline_date.toLocaleDateString('en-US', {
+				month: 'short',
+				day: '2-digit',
+				year: 'numeric'
+			})}
           </div>
         ) : (
           <div />
         )}
 
-        {ticket.assignee ? (
+        {ticket.Users_Tickets_watcher_idToUsers ? (
           <div
-            className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold text-white shrink-0 ${ticket.assignee.bgColor}`}
-            title={ticket.assignee.name}
+            className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold text-white bg-gray-600 shrink-0 {usercolor}`}
+            title={ticket.Users_Tickets_watcher_idToUsers?.name}
           >
-            {ticket.assignee.initials}
+            {getInitials(ticket.Users_Tickets_watcher_idToUsers?.name)}
           </div>
         ) : (
           <div className="w-6 h-6 rounded-full border-2 border-dashed border-gray-200" />
         )}
-      </div>
+      </div> }
 
       <DeleteConfirmationModal
         isOpen={isDeleteModalOpen}
-        ticketTitle={ticket.title}
+        ticketTitle={ticket.name}
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={() => {
           setIsDeleteModalOpen(false);
-          onDelete(ticket.id);
+          onDelete(ticket.ticket_id);
         }}
       />
     </div>
@@ -292,7 +309,7 @@ interface TicketCardProps {
 
 export default function TicketCard({ ticket, onSelect, onEdit, onDelete }: TicketCardProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: ticket.id,
+    id: ticket.ticket_id,
   });
 
   const style = {

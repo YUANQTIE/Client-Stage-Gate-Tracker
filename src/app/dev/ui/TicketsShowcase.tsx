@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { TicketCardContent } from '@/components/tickets/TicketCard';
-import TicketSlideOver from '@/components/tickets/TicketSlideOver';
+import TicketSlideOver from '@/components/tickets/EditTicketModal';
 import CreateTicketModal from '@/components/tickets/CreateTicketModal';
 import TicketBoard from '@/components/tickets/TicketBoard';
 import { MOCK_TICKETS } from '@/components/tickets/types';

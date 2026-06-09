@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   DndContext,
   DragEndEvent,
@@ -14,10 +14,12 @@ import {
 
 import { TicketCardContent } from "./TicketCard";
 import TicketColumn from "./TicketColumn";
-import TicketSlideOver from "./TicketSlideOver";
 import CreateTicketModal from "./CreateTicketModal";
-import { ColumnId, COLUMNS, MOCK_TICKETS, Ticket } from "./types";
+import EditTicketModal from "./EditTicketModal";
+import { COLUMNS } from "./types";
 
+import { Prisma } from "@/lib/generated/prisma"; 
+import { ticketSelect, ticketUpdateStatus, ticketCreate,ticketDelete, type Ticket } from "@/actions/ticketActions";
 // ── Icons ─────────────────────────────────────────────────────────────────────
 
 function FilterIcon() {
@@ -115,14 +117,6 @@ function ChevronRightIcon() {
   );
 }
 
-// ── Sprint member avatars ─────────────────────────────────────────────────────
-
-const SPRINT_MEMBERS = [
-  { initials: "AM", bgColor: "bg-indigo-600" },
-  { initials: "MC", bgColor: "bg-slate-700" },
-  { initials: "SJ", bgColor: "bg-pink-500" },
-];
-
 // ── Main board ────────────────────────────────────────────────────────────────
 
 interface TicketBoardProps {
@@ -134,10 +128,12 @@ export default function TicketBoard({
   projectId,
   workflowId,
 }: TicketBoardProps) {
-  const [tickets, setTickets] = useState<Ticket[]>(MOCK_TICKETS);
+	// Initialize state using Ticket directly
+  const [tickets, setTickets] = useState<Ticket[]>([]);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
-  const [slideOverOpen, setSlideOverOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
+  const [slideOverOpen, setSlideOverOpen] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const wasDraggingRef = useRef(false);
@@ -150,7 +146,23 @@ export default function TicketBoard({
   });
   const sensors = useSensors(mouseSensor, touchSensor);
 
-  const activeTicket = activeId ? tickets.find((t) => t.id === activeId) : null;
+  const activeTicket = activeId ? tickets.find((t) => t.ticket_id === activeId) : null;
+
+  async function loadDatabaseTickets() {
+    try {
+      setIsLoading(true);
+      const data = await ticketSelect();
+      setTickets(data);
+    } catch (error) {
+      console.error("Error loading tickets from database:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadDatabaseTickets();
+  }, []);
 
   function handleSelectTicket(ticket: Ticket) {
     if (wasDraggingRef.current) return;
@@ -158,31 +170,79 @@ export default function TicketBoard({
     setSlideOverOpen(true);
   }
 
+  async function handleCreateTicket(newTicketData: Partial<Ticket>, tagIds: string[] = []) 
+	{
+		const previousTickets = tickets;
+		try {
+			const newTicket = await ticketCreate(
+				{
+					name: newTicketData.name ?? "New Ticket",
+					description: newTicketData.description ?? null,
+					status: newTicketData.status ?? "PENDING",
+					assigner_id: newTicketData.assigner_id ?? "",
+					watcher_id: newTicketData.watcher_id ?? null,
+					deadline_date: newTicketData.deadline_date ?? new Date(),
+				},
+				tagIds
+			);
+			setTickets(prev => [...prev, newTicket]);
+		} catch (error) {
+			setTickets(previousTickets);
+			console.error("Failed to create ticket:", error);
+		}
+	}
+
+  async function handleDeleteTicket(ticketId: string) 
+	{
+		const previousTickets = tickets;
+		try {
+			setTickets(prev => prev.filter(t => t.ticket_id !== ticketId));
+			await ticketDelete(ticketId);
+		} catch (error) {
+			setTickets(previousTickets);
+			console.error("Failed to delete ticket:", error);
+		}
+	}
+
   function handleDragStart(event: DragStartEvent) {
     setActiveId(event.active.id as string);
     wasDraggingRef.current = true;
   }
 
-  function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event;
-    setActiveId(null);
+  async function handleDragEnd(event: DragEndEvent) {
+		const { active, over } = event;
+		setActiveId(null);
 
-    if (over && active.id !== over.id) {
-      const newColumn = over.id as ColumnId;
-      setTickets((prev) =>
-        prev.map((t) => (t.id === active.id ? { ...t, column: newColumn } : t)),
-      );
-    }
+		if (over && active.id !== over.id) {
+			const newStatus = over.id as Ticket['status'];
+			const previousTickets = tickets; // snapshot before updating
 
-    // Allow click handlers to fire, then reset the flag
-    setTimeout(() => {
-      wasDraggingRef.current = false;
-    }, 100);
-  }
+			setTickets((prev) =>
+				prev.map((t) =>
+					t.ticket_id === active.id ? { ...t, status: newStatus } : t
+				)
+			);
 
-  function handleCreateTicket(newTicketData: Omit<Ticket, "id">) {
-    const id = `ASC-${1100 + tickets.length}`;
-    setTickets((prev) => [...prev, { ...newTicketData, id }]);
+			try {
+				await ticketUpdateStatus(active.id as string, newStatus);
+			} catch (error) {
+				setTickets(previousTickets); // roll back to snapshot
+				console.error("Failed to update ticket status:", error);
+			}
+		}
+
+		setTimeout(() => {
+			wasDraggingRef.current = false;
+		}, 100);
+	}
+
+  // 6. Handle loading screen while data transfers from server
+  if (isLoading) {
+    return (
+      <div className="flex h-full items-center justify-center bg-slate-50">
+        <div className="text-gray-500 font-medium animate-pulse">Loading database tickets...</div>
+      </div>
+    );
   }
 
   return (
@@ -225,7 +285,7 @@ export default function TicketBoard({
         <div className="flex items-center gap-3">
           <h1 className="text-xl font-bold text-gray-900">Current Sprint</h1>
           {/* Sprint member avatars */}
-          <div className="flex items-center">
+          {/* <div className="flex items-center">
             {SPRINT_MEMBERS.map((m, i) => (
               <div
                 key={m.initials}
@@ -242,7 +302,7 @@ export default function TicketBoard({
             >
               +3
             </div>
-          </div>
+          </div> */}
         </div>
 
         <div className="flex items-center gap-3">
@@ -273,8 +333,9 @@ export default function TicketBoard({
               <TicketColumn
                 key={column.id}
                 column={column}
-                tickets={tickets.filter((t) => t.column === column.id)}
-                onSelectTicket={handleSelectTicket}
+								tickets={tickets.filter((t) => t.status === column.id)}
+								onSelectTicket={handleSelectTicket}
+								onDeleteTicket={handleDeleteTicket}
               />
             ))}
           </div>
@@ -291,11 +352,12 @@ export default function TicketBoard({
       </DndContext>
 
       {/* Ticket detail slide-over */}
-      <TicketSlideOver
-        ticket={selectedTicket}
-        isOpen={slideOverOpen}
-        onClose={() => setSlideOverOpen(false)}
-      />
+      <EditTicketModal
+				ticket={selectedTicket}
+				isOpen={slideOverOpen}
+				onClose={() => setSlideOverOpen(false)}
+				onUpdate={(updated) => setTickets(prev => prev.map(t => t.ticket_id === updated.ticket_id ? updated : t))}
+			/>
 
       {/* Create ticket modal */}
       <CreateTicketModal

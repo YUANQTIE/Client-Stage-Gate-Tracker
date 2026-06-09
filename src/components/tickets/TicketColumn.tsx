@@ -2,7 +2,8 @@
 
 import { useDroppable } from '@dnd-kit/core';
 import TicketCard from './TicketCard';
-import { Column, Ticket } from './types';
+import { Column } from './types';
+import { type Ticket } from "@/actions/ticketActions";
 
 interface TicketColumnProps {
   column: Column;
@@ -22,7 +23,7 @@ export default function TicketColumn({
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
 
   return (
-    <div className="flex flex-col w-72 shrink-0 select-none">
+    <div className="flex flex-col w-90 shrink-0 select-none">
       {/* Column header */}
       <div className="flex items-center gap-2 mb-2.5 px-1">
         <span className={`w-2 h-2 rounded-full ${column.dotColor}`} />
@@ -41,7 +42,7 @@ export default function TicketColumn({
       >
         {tickets.map((ticket) => (
           <TicketCard
-            key={ticket.id}
+            key={ticket.ticket_id}
             ticket={ticket}
             onSelect={onSelectTicket}
             onEdit={onEditTicket}   

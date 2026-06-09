@@ -1,7 +1,9 @@
 'use client';
 
-import { useState } from 'react';
-import { Ticket, ColumnId } from './types';
+import { useState, useRef, useEffect } from 'react';
+import { Prisma } from "@/lib/generated/prisma"; 
+import { type Ticket , tagSelect} from "@/actions/ticketActions";
+import { userSelect } from "@/actions/userActions";
 import Input from '@/components/ui/input';
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
@@ -14,7 +16,6 @@ function XIcon() {
     </svg>
   );
 }
-
 function ChevronDownIcon() {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
@@ -22,7 +23,6 @@ function ChevronDownIcon() {
     </svg>
   );
 }
-
 function CloudUploadIcon() {
   return (
     <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="text-indigo-400">
@@ -32,7 +32,6 @@ function CloudUploadIcon() {
     </svg>
   );
 }
-
 function UserIcon() {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="text-gray-400">
@@ -41,7 +40,6 @@ function UserIcon() {
     </svg>
   );
 }
-
 function EyeIcon() {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="text-gray-400">
@@ -56,7 +54,7 @@ function EyeIcon() {
 interface CreateTicketModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreateTicket: (ticket: Omit<Ticket, 'id'>) => void;
+  onCreateTicket: (ticket: Partial<Ticket>) => void;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -67,23 +65,52 @@ export default function CreateTicketModal({ isOpen, onClose, onCreateTicket }: C
   const [type, setType] = useState('');
   const [deadline, setDeadline] = useState('');
 
+	const [tags, setTags] = useState<string[]>([]);
+	const [tagsOpen, setTagsOpen] = useState(false);
+	const tagsRef = useRef<HTMLDivElement>(null);
+
+	const [users, setUsers] = useState<Prisma.UsersGetPayload<{}>[]>([]);
+	const [assignerId, setAssignerId] = useState('');
+	const [watcherId, setWatcherId] = useState('');
+	const [availableTags, setAvailableTags] = useState<Prisma.TagsGetPayload<{}>[]>([]);
+	
+	useEffect(() => {
+		userSelect().then(setUsers);
+		tagSelect().then(setAvailableTags);
+	
+		function handleClickOutside(e: MouseEvent) {
+			if (tagsRef.current && !tagsRef.current.contains(e.target as Node)) {
+				setTagsOpen(false);
+			}
+		}
+		document.addEventListener('mousedown', handleClickOutside);
+		return () => document.removeEventListener('mousedown', handleClickOutside);
+	}, []);
+
+	function toggleTag(tagId: string) {
+		setTags(prev => prev.includes(tagId) ? prev.filter(t => t !== tagId) : [...prev, tagId]);
+	}
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!title.trim()) return;
 
-    onCreateTicket({
-      column: 'TODO' as ColumnId,
-      title: title.trim(),
-      description: description.trim() || undefined,
-      type: type || undefined,
-      typeColor: type === 'Frontend' ? 'bg-blue-500' : type === 'Backend' ? 'bg-green-500' : type === 'Integration' ? 'bg-purple-500' : undefined,
-      deadline: deadline || undefined,
-    });
+	onCreateTicket({
+		name: title.trim(),
+		description: description.trim() || null,
+		deadline_date: deadline ? new Date(deadline) : new Date(),
+		assigner_id: assignerId || undefined,
+		watcher_id: watcherId || null,
+		status: 'PENDING',
+	});
 
     setTitle('');
     setDescription('');
     setType('');
     setDeadline('');
+		setAssignerId('');
+		setWatcherId('');
+		setTags([]);
     onClose();
   }
 
@@ -92,6 +119,18 @@ export default function CreateTicketModal({ isOpen, onClose, onCreateTicket }: C
   }
 
   if (!isOpen) return null;
+
+	const colorClasses = {
+		indigo: "bg-indigo-50 text-indigo-700",
+		red:    "bg-red-50 text-red-700",
+		green:  "bg-green-50 text-green-700",
+		blue:   "bg-blue-50 text-blue-700",
+		yellow: "bg-yellow-50 text-yellow-700",
+		purple: "bg-purple-50 text-purple-700",
+		pink:   "bg-pink-50 text-pink-700",
+		gray:   "bg-gray-50 text-gray-700",
+		// add more as needed
+	};
 
   return (
     <div
@@ -139,99 +178,132 @@ export default function CreateTicketModal({ isOpen, onClose, onCreateTicket }: C
             />
           </div>
 
+          {/* Assigned to + Watchers row */}
+          <div className="grid grid-cols-2 gap-4">
+							{/* Assigned To */}
+							<div className="space-y-1.5">
+								<label className="text-sm font-medium text-gray-700">Assigned To</label>
+								<div className="relative">
+									<div className="pointer-events-none absolute inset-y-0 left-3 flex items-center">
+										<UserIcon />
+									</div>
+									<select
+										value={assignerId}
+										onChange={(e) => setAssignerId(e.target.value)}
+										className="w-full appearance-none rounded-lg border border-gray-200 bg-white pl-9 pr-9 py-2.5 text-sm text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+									>
+										<option value="">Unassigned</option>
+										{users.map((u) => (
+											<option key={u.user_id} value={u.user_id}>{u.name}</option>
+										))}
+									</select>
+									<div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-400">
+										<ChevronDownIcon />
+									</div>
+								</div>
+							</div>
+
+							{/* Watcher */}
+							<div className="space-y-1.5">
+								<label className="text-sm font-medium text-gray-700">Watcher</label>
+								<div className="relative">
+									<div className="pointer-events-none absolute inset-y-0 left-3 flex items-center">
+										<EyeIcon />
+									</div>
+									<select
+										value={watcherId}
+										onChange={(e) => setWatcherId(e.target.value)}
+										className="w-full appearance-none rounded-lg border border-gray-200 bg-white pl-9 pr-9 py-2.5 text-sm text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+									>
+										<option value="">Add watchers...</option>
+										{users.map((u) => (
+											<option key={u.user_id} value={u.user_id}>{u.name}</option>
+										))}
+									</select>
+									<div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-400">
+										<ChevronDownIcon />
+									</div>
+								</div>
+							</div>
+					</div>
+
           {/* Type + Tags row */}
           <div className="grid grid-cols-2 gap-4">
-            {/* Type */}
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-gray-700">Type</label>
-              <div className="relative">
-                <select
-                  value={type}
-                  onChange={(e) => setType(e.target.value)}
-                  className="w-full appearance-none rounded-lg border border-gray-200 bg-white px-3.5 py-2.5 pr-9 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                >
-                  <option value="">Select type</option>
-                  <option value="Frontend">Frontend</option>
-                  <option value="Backend">Backend</option>
-                  <option value="Integration">Integration</option>
-                  <option value="Design">Design</option>
-                </select>
-                <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-400">
-                  <ChevronDownIcon />
-                </div>
-              </div>
-            </div>
 
             {/* Tags */}
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-gray-700">Tags</label>
-              <div className="relative">
-                <select className="w-full appearance-none rounded-lg border border-gray-200 bg-white px-3.5 py-2.5 pr-9 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-                  <option value="">Create tag</option>
-                  <option value="urgent">Urgent</option>
-                  <option value="api">API</option>
-                  <option value="ux">UX</option>
-                  <option value="auth">Auth</option>
-                </select>
-                <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-400">
-                  <ChevronDownIcon />
-                </div>
-              </div>
-            </div>
-          </div>
+						<div className="space-y-1.5" ref={tagsRef}>
+							<label className="text-sm font-medium text-gray-700">Tags</label>
+							<div className="relative">
+								<button
+									type="button"
+									onClick={() => setTagsOpen(o => !o)}
+									className="w-full flex items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent min-h-[38px]"
+								>
+									<div className="flex flex-wrap gap-1 flex-1">
+										{tags.length === 0 ? (
+											<span className="text-gray-400">Select tags...</span>
+										) : (
+											tags.map(tag_id => {
+												const tag = availableTags.find(t => t.tag_id === tag_id);
+												return (
+													<span
+														key={tag_id}
+														className={
+															(colorClasses[tag?.color as keyof typeof colorClasses] ?? colorClasses.indigo) +
+															" inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium"
+														}
+													>
+														{tag?.name}
+														<span
+															className="cursor-pointer opacity-60 hover:opacity-100 text-sm leading-none"
+															onClick={e => { e.stopPropagation(); toggleTag(tag_id); }}
+														>
+															×
+														</span>
+													</span>
+												);
+											})
+										)}
+									</div>
+									<ChevronDownIcon />
+								</button>
 
-          {/* Assigned To + Watcher row */}
-          <div className="grid grid-cols-2 gap-4">
-            {/* Assigned To */}
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-gray-700">Assigned To</label>
-              <div className="relative">
-                <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center">
-                  <UserIcon />
-                </div>
-                <select className="w-full appearance-none rounded-lg border border-gray-200 bg-white pl-9 pr-9 py-2.5 text-sm text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-                  <option value="">Unassigned</option>
-                  <option value="am">Alex M.</option>
-                  <option value="mc">Michael Chen</option>
-                  <option value="sj">Sarah Jenkins</option>
-                  <option value="jk">Jane K.</option>
-                </select>
-                <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-400">
-                  <ChevronDownIcon />
-                </div>
-              </div>
-            </div>
-
-            {/* Watcher */}
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-gray-700">Watcher</label>
-              <div className="relative">
-                <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center">
-                  <EyeIcon />
-                </div>
-                <select className="w-full appearance-none rounded-lg border border-gray-200 bg-white pl-9 pr-9 py-2.5 text-sm text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-                  <option value="">Add watchers...</option>
-                  <option value="am">Alex M.</option>
-                  <option value="mc">Michael Chen</option>
-                  <option value="sj">Sarah Jenkins</option>
-                  <option value="jk">Jane K.</option>
-                </select>
-                <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-400">
-                  <ChevronDownIcon />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Deadline */}
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-gray-700">Deadline</label>
-            <Input
-              type="date"
-              value={deadline}
-              onChange={(e) => setDeadline(e.target.value)}
-              className="text-gray-500"
-            />
+								{tagsOpen && (
+									<div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+										{availableTags.map(tag => (
+											<div
+												key={tag.tag_id}
+												onClick={() => toggleTag(tag.tag_id)}
+												className="flex items-center gap-2.5 px-3.5 py-2.5 text-sm cursor-pointer hover:bg-gray-50 text-gray-700"
+											>
+												<div className={`w-4 h-4 rounded flex items-center justify-center border transition-colors ${
+													tags.includes(tag.tag_id)
+														? 'bg-indigo-600 border-indigo-600'
+														: 'border-gray-300'
+												}`}>
+													{tags.includes(tag.tag_id) && (
+														<svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+															<polyline points="2 6 5 9 10 3" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+														</svg>
+													)}
+												</div>
+												{tag.name}
+											</div>
+										))}
+									</div>
+								)}
+							</div>
+						</div>
+						{/* Deadline */}
+						<div className="space-y-1.5">
+							<label className="text-sm font-medium text-gray-700">Deadline</label>
+							<Input
+								type="date"
+								value={deadline}
+								onChange={(e) => setDeadline(e.target.value)}
+								className="text-gray-500"
+							/>
+						</div>
           </div>
 
           {/* Attachments */}

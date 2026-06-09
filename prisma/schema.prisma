@@ -321,7 +321,7 @@ model Tickets {
   TicketSubtasks_TicketSubtasks_subtask_idToTickets TicketSubtasks[]      @relation("TicketSubtasks_subtask_idToTickets")
   TicketSubtasks_TicketSubtasks_ticket_idToTickets  TicketSubtasks[]      @relation("TicketSubtasks_ticket_idToTickets")
   TicketTags                                        TicketTags[]
-  Users_Tickets_assigner_idToUsers                  Users                 @relation("Tickets_assigner_idToUsers", fields: [assigner_id], references: [user_id], onDelete: SetNull)
+  Users_Tickets_assigner_idToUsers                  Users               @relation("Tickets_assigner_idToUsers", fields: [assigner_id], references: [user_id], onDelete: SetNull)
   Users_Tickets_watcher_idToUsers                   Users?                @relation("Tickets_watcher_idToUsers", fields: [watcher_id], references: [user_id])
   WorkflowsTickets                                  WorkflowsTickets[]
 }
