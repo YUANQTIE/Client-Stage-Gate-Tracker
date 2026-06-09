@@ -1,58 +1,99 @@
+"use server";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/lib/generated/prisma"; 
 
-export async function TicketCreate(ticketInput: Prisma.TicketsUncheckedCreateInput) {
-    const newTicket = await prisma.Tickets.create({
-        data: {
-            name: ticketInput.name,
-            description: ticketInput.description,
-            
-            assigner_id: ticketInput.assigner_id, 
-            watcher_id: ticketInput.watcher_id ?? undefined, 
+// ── Ticket Type ───────────────────────────────────────────────────────────────
 
-            deadline_date: ticketInput.deadline_date,
-            creation_date: ticketInput.creation_date ?? undefined,
-            assignment_date: ticketInput.assignment_date ?? undefined,
-            start_date: ticketInput.start_date ?? undefined,
-            end_date: ticketInput.end_date ?? undefined,
-            status: ticketInput.status ?? undefined
-        },
-    });
+const ticketInclude = {
+  Users_Tickets_assigner_idToUsers: true,
+  Users_Tickets_watcher_idToUsers: true,
+  TicketSubtasks_TicketSubtasks_ticket_idToTickets: true,
+  TicketTags: { include: { Tags: true } },
+} satisfies Prisma.TicketsInclude;
 
-    return newTicket;
+export type Ticket = Prisma.TicketsGetPayload<{
+  include: typeof ticketInclude;
+}>;
+
+// ── Tags ──────────────────────────────────────────────────────────────────────
+
+export async function tagSelect() {
+  return prisma.tags.findMany();
 }
 
-export async function TicketEdit(ticketId:string,ticketInput:Prisma.TicketsUncheckedUpdateInput) {
-    const editedTicket = await prisma.Tickets.update({
-        where: {
-            ticket_id: ticketId,
-        },
-		data:{
-            name: ticketInput.name,
-            description: ticketInput.description,
-            
-            assigner_id: ticketInput.assigner_id, 
-            watcher_id: ticketInput.watcher_id, 
+// ── Tickets ───────────────────────────────────────────────────────────────────
 
-            deadline_date: ticketInput.deadline_date,
-            creation_date: ticketInput.creation_date,
-            assignment_date: ticketInput.assignment_date,
-            start_date: ticketInput.start_date,
-            end_date: ticketInput.end_date,
-            status: ticketInput.status
-		}
-
-    });
-
-    return editedTicket;
+export async function ticketSelect(): Promise<Ticket[]> {
+  return prisma.tickets.findMany({ include: ticketInclude });
 }
 
-export async function TicketDelete(ticketId:string) {
-    const deletedTicket = await prisma.Tickets.delete({
-        where: {
-            ticket_id: ticketId,
-        },
-    });
+export async function ticketCreate(
+  data: Prisma.TicketsUncheckedCreateInput,
+  tagIds: string[] = []
+): Promise<Ticket> {
+  return prisma.tickets.create({
+    data: {
+      ...data,
+      TicketTags: {
+        create: tagIds.map(tag_id => ({ tag_id })),
+      },
+    },
+    include: ticketInclude,
+  });
+}
 
-    return deletedTicket;
+export async function ticketUpdate(
+  ticketId: string,
+  data: Prisma.TicketsUncheckedUpdateInput,
+  tagIds?: string[]
+): Promise<Ticket> {
+  // If tagIds provided, sync tags: delete all existing then re-insert
+  if (tagIds !== undefined) {
+    await prisma.ticketTags.deleteMany({ where: { ticket_id: ticketId } });
+  }
+
+  return prisma.tickets.update({
+    where: { ticket_id: ticketId },
+    data: {
+      ...data,
+      ...(tagIds !== undefined && {
+        TicketTags: {
+          create: tagIds.map(tag_id => ({ tag_id })),
+        },
+      }),
+    },
+    include: ticketInclude,
+  });
+}
+
+export async function ticketUpdateStatus(
+  ticketId: string,
+  status: Ticket['status']
+): Promise<Ticket> {
+  return prisma.tickets.update({
+    where: { ticket_id: ticketId },
+    data: { status },
+    include: ticketInclude,
+  });
+}
+
+export async function ticketDelete(ticketId: string) {
+  await prisma.ticketTags.deleteMany({ where: { ticket_id: ticketId } });
+  await prisma.ticketComments.deleteMany({ where: { ticket_id: ticketId } });
+  await prisma.ticketImages.deleteMany({ where: { ticket_id: ticketId } });
+  await prisma.ticketSubtasks.deleteMany({ 
+    where: { 
+      OR: [
+        { ticket_id: ticketId },
+        { subtask_id: ticketId }
+      ]
+    }
+  });
+  await prisma.ticketHistoryEvents.deleteMany({ where: { ticket_id: ticketId } });
+  await prisma.ticketAssigned.deleteMany({ where: { ticket_id: ticketId } });
+  await prisma.workflowsTickets.deleteMany({ where: { ticket_id: ticketId } });
+
+  return prisma.tickets.delete({
+    where: { ticket_id: ticketId },
+  });
 }
