@@ -35,7 +35,8 @@ export function AuthProvider({children}: prop)
     </auth_context.Provider>
 }
 
-export function useAuth()
-{
-    useContext(auth_context)
+export function useAuth() {
+  const context = useContext(auth_context);
+  
+  return context;
 }
