@@ -1,4 +1,5 @@
 "use client";
+import Sidebar from '@/components/layout/sidebar';
 
 import { useState } from "react";
 import {
@@ -13,6 +14,7 @@ export default function EditorPage() {
 
   return (
     <div className="bg-[#F8FAFC] min-h-screen">
+      <Sidebar>
       <div className="max-w-[1400px] mx-auto p-8">
         {/* Header */}
         <div className="flex justify-between items-end pb-6 mb-6 border-b border-[#E2E8F0]">
@@ -47,8 +49,9 @@ export default function EditorPage() {
         <ModulesCard activePhase={activePhase} />
 
         {/* Screen & API Tracker */}
-        <ScreenApiTracker />
+        {/*<ScreenApiTracker /> */}
       </div>
+      </Sidebar>
     </div>
   );
 }

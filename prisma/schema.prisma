@@ -1,6 +1,6 @@
 generator client {
-  	provider = "prisma-client-js"
-	output   = "../src/lib/generated/prisma"
+  provider = "prisma-client-js"
+  output   = "../src/lib/generated/prisma"
 }
 
 datasource db {
@@ -114,7 +114,7 @@ model Modules {
   start_date      DateTime?         @db.Timestamptz(6)
   end_date        DateTime?         @db.Timestamptz(6)
   ModuleWorkflows ModuleWorkflows[]
-  StageModules    StageModules[]
+  PhaseModules    PhaseModules[]
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
@@ -126,24 +126,15 @@ model Permissions {
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model PhaseStages {
-  phase_id String @db.Uuid
-  stage_id String @db.Uuid
-  Phases   Phases @relation(fields: [phase_id], references: [phase_id], onDelete: SetNull)
-  Stages   Stages @relation(fields: [stage_id], references: [stage_id], onDelete: SetNull)
-
-  @@id([phase_id, stage_id])
-}
-
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model Phases {
-  phase_id      String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  phase_id      String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   number        Int
-  start_date    DateTime?       @db.Timestamptz(6)
-  end_date      DateTime?       @db.Timestamptz(6)
-  creation_date DateTime        @default(dbgenerated("(now() AT TIME ZONE 'utc'::text)")) @db.Timestamptz(6)
-  PhaseStages   PhaseStages[]
-  ProjectPhases ProjectPhases[]
+  start_date    DateTime?      @db.Timestamptz(6)
+  end_date      DateTime?      @db.Timestamptz(6)
+  creation_date DateTime       @default(dbgenerated("(now() AT TIME ZONE 'utc'::text)")) @db.Timestamptz(6)
+  name          String
+  PhaseModules  PhaseModules[]
+  StagePhases   StagePhases[]
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
@@ -158,16 +149,6 @@ model ProjectGates {
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model ProjectPhases {
-  project_id String   @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  phase_id   String   @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  Phases     Phases   @relation(fields: [phase_id], references: [phase_id], onDelete: SetNull)
-  Projects   Projects @relation(fields: [project_id], references: [project_id], onDelete: SetNull)
-
-  @@id([project_id, phase_id])
-}
-
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model Projects {
   project_id      String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   creation_date   DateTime?         @db.Timestamptz(6)
@@ -175,7 +156,7 @@ model Projects {
   end_date        DateTime?         @db.Timestamptz(6)
   Contracts       Contracts[]
   ProjectGates    ProjectGates[]
-  ProjectPhases   ProjectPhases[]
+  ProjectStages   ProjectStages[]
   RoleAssignments RoleAssignments[]
 }
 
@@ -211,24 +192,15 @@ model Roles {
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model StageModules {
-  stage_id  String  @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  module_id String  @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  Modules   Modules @relation(fields: [module_id], references: [module_id], onDelete: SetNull)
-  Stages    Stages  @relation(fields: [stage_id], references: [stage_id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@id([stage_id, module_id])
-}
-
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model Stages {
-  stage_id      String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  number        Int            @db.SmallInt
-  start_date    DateTime?      @db.Timestamptz(6)
-  end_date      DateTime?      @db.Timestamptz(6)
-  creation_date DateTime       @default(dbgenerated("(now() AT TIME ZONE 'utc'::text)")) @db.Timestamptz(6)
-  PhaseStages   PhaseStages[]
-  StageModules  StageModules[]
+  stage_id      String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  number        Int             @db.SmallInt
+  start_date    DateTime?       @db.Timestamptz(6)
+  end_date      DateTime?       @db.Timestamptz(6)
+  creation_date DateTime        @default(dbgenerated("(now() AT TIME ZONE 'utc'::text)")) @db.Timestamptz(6)
+  name          String
+  ProjectStages ProjectStages[]
+  StagePhases   StagePhases[]
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
@@ -304,7 +276,7 @@ model TicketTags {
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model Tickets {
   ticket_id                                         String                @id(map: "TIckets_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  assigner_id                                       String                @db.Uuid
+  assigner_id                                       String?               @db.Uuid
   watcher_id                                        String?               @db.Uuid
   assignment_date                                   DateTime              @default(dbgenerated("(now() AT TIME ZONE 'utc'::text)")) @db.Timestamptz(6)
   creation_date                                     DateTime              @default(dbgenerated("(now() AT TIME ZONE 'utc'::text)")) @db.Timestamptz(6)
@@ -321,7 +293,7 @@ model Tickets {
   TicketSubtasks_TicketSubtasks_subtask_idToTickets TicketSubtasks[]      @relation("TicketSubtasks_subtask_idToTickets")
   TicketSubtasks_TicketSubtasks_ticket_idToTickets  TicketSubtasks[]      @relation("TicketSubtasks_ticket_idToTickets")
   TicketTags                                        TicketTags[]
-  Users_Tickets_assigner_idToUsers                  Users               @relation("Tickets_assigner_idToUsers", fields: [assigner_id], references: [user_id], onDelete: SetNull)
+  Users_Tickets_assigner_idToUsers                  Users?                @relation("Tickets_assigner_idToUsers", fields: [assigner_id], references: [user_id])
   Users_Tickets_watcher_idToUsers                   Users?                @relation("Tickets_watcher_idToUsers", fields: [watcher_id], references: [user_id])
   WorkflowsTickets                                  WorkflowsTickets[]
 }
@@ -366,6 +338,36 @@ model WorkflowsTickets {
   Workflows   Workflows @relation(fields: [workflow_id], references: [workflow_id], onDelete: SetNull)
 
   @@id([workflow_id, ticket_id])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model PhaseModules {
+  phase_id  String  @db.Uuid
+  module_id String  @db.Uuid
+  Modules   Modules @relation(fields: [module_id], references: [module_id], onDelete: SetNull)
+  Phases    Phases  @relation(fields: [phase_id], references: [phase_id], onDelete: SetNull)
+
+  @@id([phase_id, module_id])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model ProjectStages {
+  project_id String   @db.Uuid
+  stage_id   String   @db.Uuid
+  Projects   Projects @relation(fields: [project_id], references: [project_id], onDelete: SetNull)
+  Stages     Stages   @relation(fields: [stage_id], references: [stage_id], onDelete: SetNull)
+
+  @@id([project_id, stage_id])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model StagePhases {
+  stage_id String @db.Uuid
+  phase_id String @db.Uuid
+  Phases   Phases @relation(fields: [phase_id], references: [phase_id], onDelete: SetNull)
+  Stages   Stages @relation(fields: [stage_id], references: [stage_id], onDelete: SetNull)
+
+  @@id([stage_id, phase_id])
 }
 
 enum action {
