@@ -300,13 +300,12 @@ model Tickets {
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model Users {
-  user_id                            String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id                            String            @id @db.Uuid
   name                               String
   image_id                           String?           @db.Uuid
   client_id                          String?           @db.Uuid
   department_id                      String?           @db.Uuid
   email                              String            @unique
-  password                           String
   Comments                           Comments[]
   RoleAssignments                    RoleAssignments[]
   TicketAssigned                     TicketAssigned[]

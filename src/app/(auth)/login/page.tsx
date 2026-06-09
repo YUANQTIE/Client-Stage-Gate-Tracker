@@ -8,6 +8,8 @@ import { Hanken_Grotesk } from 'next/font/google'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
+import { createClient } from '@/lib/supabase/client'
+import { useAuth } from '../context/auth_provider'
 
 const hanken = Hanken_Grotesk({
   subsets: ['latin'],
@@ -17,10 +19,25 @@ const hanken = Hanken_Grotesk({
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const router = useRouter()
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  // const [error, setError] = useState<string | null>(null)
+  const supabase = createClient()
+  const {user} = useAuth()
 
-  const handleSignIn = (e: React.FormEvent) => {
+
+  const handleSignIn = async (e: React.SubmitEvent) => {
     e.preventDefault()
-    router.push('/projects/demo/workflows/sprint-1/tickets')
+    // setError(null)
+    const {error} = await supabase.auth.signInWithPassword({email, password})
+    if (error)
+    {
+      // setError(error.message)
+      return
+    }
+
+    //CHANGE INITIAL PAGE HERE
+    router.push('/dashboard')
   }
 
   return (
@@ -63,6 +80,7 @@ export default function LoginPage() {
                   id="email"
                   type="email"
                   placeholder="name@company.com"
+                  onChange={e => setEmail(e.target.value)}
                 />
               </div>
 
@@ -83,6 +101,7 @@ export default function LoginPage() {
                     type={showPassword ? 'text' : 'password'}
                     defaultValue="••••••••"
                     className="pr-11"
+                    onChange={e => {setPassword(e.target.value)}}
                   />
                   <button
                     type="button"

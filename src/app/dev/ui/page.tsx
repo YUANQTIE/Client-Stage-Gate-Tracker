@@ -35,7 +35,7 @@ export default function UIPage() {
           <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">Internal</p>
           <h1 className="text-2xl font-semibold text-gray-900">Component Library</h1>
           <p className="text-sm text-gray-400 mt-1">
-            UI primitives from <code className="bg-gray-100 px-1 rounded">src/components/ui/</code> and ticket components from <code className="bg-gray-100 px-1 rounded">src/components/tickets/</code>
+            All reusable UI primitives — <code className="bg-gray-100 px-1 rounded">src/components/ui/</code>
           </p>
         </div>
 
