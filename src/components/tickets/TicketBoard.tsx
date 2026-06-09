@@ -170,7 +170,7 @@ export default function TicketBoard({
     setSlideOverOpen(true);
   }
 
-  async function handleCreateTicket(newTicketData: Partial<Ticket>, tagIds: string[] = []) 
+  async function handleCreateTicket(newTicketData: Partial<Ticket>, tagIds: string[] = [],assignedIds: string[] = []) 
 	{
 		const previousTickets = tickets;
 		try {
@@ -179,11 +179,11 @@ export default function TicketBoard({
 					name: newTicketData.name ?? "New Ticket",
 					description: newTicketData.description ?? null,
 					status: newTicketData.status ?? "PENDING",
-					assigner_id: newTicketData.assigner_id ?? "",
+					assigner_id: newTicketData.assigner_id || null,
 					watcher_id: newTicketData.watcher_id ?? null,
 					deadline_date: newTicketData.deadline_date ?? new Date(),
 				},
-				tagIds
+				tagIds,assignedIds
 			);
 			setTickets(prev => [...prev, newTicket]);
 		} catch (error) {

@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Prisma } from "@/lib/generated/prisma"; 
 import { type Ticket , tagSelect} from "@/actions/ticketActions";
 import { userSelect } from "@/actions/userActions";
-import Input from '@/components/ui/input';
+import { Input } from '@/components/ui/input';
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 
@@ -69,11 +69,14 @@ export default function CreateTicketModal({ isOpen, onClose, onCreateTicket }: C
 	const [tagsOpen, setTagsOpen] = useState(false);
 	const tagsRef = useRef<HTMLDivElement>(null);
 
-	const [users, setUsers] = useState<Prisma.UsersGetPayload<{}>[]>([]);
+	const [users, setUsers] = useState<Prisma.usersGetPayload<{}>[]>([]);
 	const [assignerId, setAssignerId] = useState('');
+	const [assignedIds, setAssignedIds] = useState<string[]>([]);	
 	const [watcherId, setWatcherId] = useState('');
 	const [availableTags, setAvailableTags] = useState<Prisma.TagsGetPayload<{}>[]>([]);
-	
+	const assignedRef = useRef<HTMLDivElement>(null);
+	const [assignedOpen, setAssignedOpen] = useState(false);
+
 	useEffect(() => {
 		userSelect().then(setUsers);
 		tagSelect().then(setAvailableTags);
@@ -91,6 +94,14 @@ export default function CreateTicketModal({ isOpen, onClose, onCreateTicket }: C
 		setTags(prev => prev.includes(tagId) ? prev.filter(t => t !== tagId) : [...prev, tagId]);
 	}
 
+	function toggleAssigned(userId: string) {
+		setAssignedIds(prev => 
+			prev.includes(userId) 
+				? prev.filter(id => id !== userId) 
+				: [...prev, userId]
+		);
+	}
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!title.trim()) return;
@@ -99,10 +110,11 @@ export default function CreateTicketModal({ isOpen, onClose, onCreateTicket }: C
 		name: title.trim(),
 		description: description.trim() || null,
 		deadline_date: deadline ? new Date(deadline) : new Date(),
-		assigner_id: assignerId || undefined,
+		assigner_id: assignerId,
 		watcher_id: watcherId || null,
 		status: 'PENDING',
-	});
+		},tags,assignedIds // [ERROR] Tags. Idk how.
+	);
 
     setTitle('');
     setDescription('');
@@ -131,7 +143,7 @@ export default function CreateTicketModal({ isOpen, onClose, onCreateTicket }: C
 		gray:   "bg-gray-50 text-gray-700",
 		// add more as needed
 	};
-
+	console.log(users)
   return (
     <div
       className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
@@ -184,22 +196,61 @@ export default function CreateTicketModal({ isOpen, onClose, onCreateTicket }: C
 							<div className="space-y-1.5">
 								<label className="text-sm font-medium text-gray-700">Assigned To</label>
 								<div className="relative">
-									<div className="pointer-events-none absolute inset-y-0 left-3 flex items-center">
-										<UserIcon />
-									</div>
-									<select
-										value={assignerId}
-										onChange={(e) => setAssignerId(e.target.value)}
-										className="w-full appearance-none rounded-lg border border-gray-200 bg-white pl-9 pr-9 py-2.5 text-sm text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+									<button
+										type="button"
+										onClick={() => setAssignedOpen(o => !o)}
+										className="w-full flex items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent min-h-[38px]"
 									>
-										<option value="">Unassigned</option>
-										{users.map((u) => (
-											<option key={u.user_id} value={u.user_id}>{u.name}</option>
-										))}
-									</select>
-									<div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-400">
+										<div className="flex flex-wrap gap-1 flex-1">
+											{assignedIds.length === 0 ? (
+												<span className="text-gray-400">Assign to...</span>
+											) : (
+												assignedIds.map(userId => {
+													const user = users.find(u => u.user_id === userId);
+													return (
+														<span
+															key={userId}
+															className="inline-flex items-center gap-1 rounded bg-indigo-50 text-indigo-700 px-1.5 py-0.5 text-xs font-medium"
+														>
+															{user?.name}
+															<span
+																className="cursor-pointer opacity-60 hover:opacity-100 text-sm leading-none"
+																onClick={e => { e.stopPropagation(); toggleAssigned(userId); }}
+															>
+																×
+															</span>
+														</span>
+													);
+												})
+											)}
+										</div>
 										<ChevronDownIcon />
-									</div>
+									</button>
+
+									{assignedOpen && (
+										<div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+											{users.map(user => (
+												<div
+													key={user.user_id}
+													onClick={() => toggleAssigned(user.user_id)}
+													className="flex items-center gap-2.5 px-3.5 py-2.5 text-sm cursor-pointer hover:bg-gray-50 text-gray-700"
+												>
+													<div className={`w-4 h-4 rounded flex items-center justify-center border transition-colors ${
+														assignedIds.includes(user.user_id)
+															? 'bg-indigo-600 border-indigo-600'
+															: 'border-gray-300'
+													}`}>
+														{assignedIds.includes(user.user_id) && (
+															<svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+																<polyline points="2 6 5 9 10 3" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+															</svg>
+														)}
+													</div>
+													{user.name}
+												</div>
+											))}
+										</div>
+									)}
 								</div>
 							</div>
 

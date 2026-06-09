@@ -8,7 +8,8 @@ const ticketInclude = {
   Users_Tickets_assigner_idToUsers: true,
   Users_Tickets_watcher_idToUsers: true,
   TicketSubtasks_TicketSubtasks_ticket_idToTickets: true,
-  TicketTags: { include: { Tags: true } },
+  TicketTags: { include: { Tags: true } },  
+	TicketAssigned: { include: { Users: true } },
 } satisfies Prisma.TicketsInclude;
 
 export type Ticket = Prisma.TicketsGetPayload<{
@@ -29,13 +30,17 @@ export async function ticketSelect(): Promise<Ticket[]> {
 
 export async function ticketCreate(
   data: Prisma.TicketsUncheckedCreateInput,
-  tagIds: string[] = []
+  tagIds: string[] = [],
+	assignedIds: string[] = []
 ): Promise<Ticket> {
   return prisma.tickets.create({
     data: {
       ...data,
       TicketTags: {
         create: tagIds.map(tag_id => ({ tag_id })),
+      },
+      TicketAssigned: {
+        create: assignedIds.map(user_id => ({ user_id })),
       },
     },
     include: ticketInclude,
@@ -45,11 +50,14 @@ export async function ticketCreate(
 export async function ticketUpdate(
   ticketId: string,
   data: Prisma.TicketsUncheckedUpdateInput,
-  tagIds?: string[]
+  tagIds?: string[],
+  assignedIds?: string[]   // ← add param
 ): Promise<Ticket> {
-  // If tagIds provided, sync tags: delete all existing then re-insert
   if (tagIds !== undefined) {
     await prisma.ticketTags.deleteMany({ where: { ticket_id: ticketId } });
+  }
+  if (assignedIds !== undefined) {
+    await prisma.ticketAssigned.deleteMany({ where: { ticket_id: ticketId } });
   }
 
   return prisma.tickets.update({
@@ -59,6 +67,11 @@ export async function ticketUpdate(
       ...(tagIds !== undefined && {
         TicketTags: {
           create: tagIds.map(tag_id => ({ tag_id })),
+        },
+      }),
+      ...(assignedIds !== undefined && {
+        TicketAssigned: {
+          create: assignedIds.map(user_id => ({ user_id })),
         },
       }),
     },

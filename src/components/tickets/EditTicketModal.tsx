@@ -48,9 +48,22 @@ export default function EditTicketModal({ ticket: initialTicket, isOpen, onClose
   const [availableTags, setAvailableTags] = useState<Prisma.TagsGetPayload<{}>[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
+  const [showAssignDropdown, setShowAssignDropdown] = useState(false);
+  const assignDropdownRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     userSelect().then(setUsers);
     tagSelect().then(setAvailableTags);
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (assignDropdownRef.current && !assignDropdownRef.current.contains(e.target as Node)) {
+        setShowAssignDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
   }, []);
 
   useEffect(() => {
@@ -65,6 +78,11 @@ export default function EditTicketModal({ ticket: initialTicket, isOpen, onClose
   }, [editing]);
 
   if (!ticket) return null;
+
+  // Computed after null check so ticket is guaranteed non-null
+  const availableUsers = users.filter(
+    user => !ticket.TicketAssigned.some(a => a.user_id === user.user_id)
+  );
 
   function startEdit(field: EditingField) {
     setEditing(field);
@@ -113,23 +131,24 @@ export default function EditTicketModal({ ticket: initialTicket, isOpen, onClose
     );
   }
 
-	async function handleSave() {
-		if (!ticket) return;
-		const updated = await ticketUpdate(
-			ticket.ticket_id,
-			{
-				name:          ticket.name,
-				description:   ticket.description,
-				assigner_id:   ticket.assigner_id,
-				watcher_id:    ticket.watcher_id,
-				deadline_date: ticket.deadline_date,
-				status:        ticket.status,
-			},
-			selectedTags
-		);
-		onUpdate(updated);  // ← push updated ticket back up
-		onClose();
-	}
+  async function handleSave() {
+    if (!ticket) return;
+    const updated = await ticketUpdate(
+      ticket.ticket_id,
+      {
+        name:          ticket.name,
+        description:   ticket.description,
+        assigner_id:   ticket.assigner_id,
+        watcher_id:    ticket.watcher_id,
+        deadline_date: ticket.deadline_date,
+        status:        ticket.status,
+      },
+      selectedTags,
+      ticket.TicketAssigned.map(a => a.user_id)
+    );
+    onUpdate(updated);
+    onClose();
+  }
 
   const assignee       = users.find(u => u.user_id === ticket.assigner_id);
   const watcher        = users.find(u => u.user_id === ticket.watcher_id);
@@ -202,32 +221,65 @@ export default function EditTicketModal({ ticket: initialTicket, isOpen, onClose
         <div className="flex-1 overflow-y-auto">
           <div className="px-5 py-4 grid grid-cols-2 gap-x-6 gap-y-4 border-b border-gray-100">
 
-            {/* Assignee */}
-            <div className="relative">
+            {/* Assigned To */}
+            <div>
               <p className="text-xs text-gray-400 font-medium mb-1.5">Assigned To</p>
-              <div className="cursor-pointer" onClick={() => setEditing(editing === 'assignee' ? null : 'assignee')}>
-                {assignee ? (
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-full bg-indigo-500 flex items-center justify-center text-[10px] font-bold text-white">
-                      {assignee.name.split(' ').map((n: string) => n[0]).join('')}
+              {ticket.TicketAssigned && ticket.TicketAssigned.length > 0 ? (
+                <div className="flex flex-col gap-1.5">
+                  {ticket.TicketAssigned.map((a) => (
+                    <div key={a.user_id} className="flex items-center gap-2 group">
+                      <div className="w-7 h-7 rounded-full bg-indigo-500 flex items-center justify-center text-[10px] font-bold text-white shrink-0">
+                        {a.Users.name.split(' ').map((n: string) => n[0]).join('')}
+                      </div>
+                      <span className="text-sm text-gray-700 font-medium flex-1">{a.Users.name}</span>
+                      <button
+                        onClick={() => setTicket(t => t ? {
+                          ...t,
+                          TicketAssigned: t.TicketAssigned.filter(x => x.user_id !== a.user_id)
+                        } : t)}
+                        className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-all text-sm leading-none"
+                      >
+                        ✕
+                      </button>
                     </div>
-                    <span className="text-sm text-gray-700 font-medium">{assignee.name}</span>
-                  </div>
-                ) : (
-                  <span className="text-sm text-gray-400">Unassigned</span>
-                )}
-              </div>
-              {editing === 'assignee' && (
-                <div className="absolute z-50 mt-1 min-w-[160px] bg-white border border-gray-200 rounded-lg shadow-lg py-1">
-                  {users.map(u => (
-                    <button
-                      key={u.user_id}
-                      onClick={() => { setAssignee(u.user_id); setEditing(null); }}
-                      className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                    >
-                      {u.name}
-                    </button>
                   ))}
+                </div>
+              ) : (
+                <span className="text-sm text-gray-400">Unassigned</span>
+              )}
+
+              {/* Add Assignee */}
+              {availableUsers.length > 0 && (
+                <div className="relative mt-2" ref={assignDropdownRef}>
+                  <button
+                    onClick={() => setShowAssignDropdown(v => !v)}
+                    className="flex items-center gap-1 text-xs text-indigo-500 hover:text-indigo-700 font-medium transition-colors"
+                  >
+                    <span className="text-base leading-none">+</span> Add assignee
+                  </button>
+
+                  {showAssignDropdown && (
+                    <div className="absolute z-10 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg py-1">
+                      {availableUsers.map((user) => (
+                        <button
+                          key={user.user_id}
+                          onClick={() => {
+                            setTicket(t => t ? {
+                              ...t,
+                              TicketAssigned: [...t.TicketAssigned, { user_id: user.user_id, Users: { name: user.name } }]
+                            } : t);
+                            setShowAssignDropdown(false);
+                          }}
+                          className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 transition-colors"
+                        >
+                          <div className="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center text-[10px] font-bold text-white shrink-0">
+                            {user.name.split(' ').map((n: string) => n[0]).join('')}
+                          </div>
+                          <span className="text-sm text-gray-700">{user.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
