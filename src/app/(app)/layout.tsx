@@ -27,8 +27,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${hankenGrotesk.variable} ${jetbrainsMono.variable}`} suppressHydrationWarning>
-      <body className="font-['Hanken_Grotesk'] antialiased" suppressHydrationWarning>{children}</body>
-    </html>
+    // <html lang="en" className={`${hankenGrotesk.variable} ${jetbrainsMono.variable}`} suppressHydrationWarning>
+    //   <body className="font-['Hanken_Grotesk'] antialiased" suppressHydrationWarning>{children}</body>
+    // </html>
+		<>{children}</>
   );
 }

@@ -267,12 +267,11 @@ export default function TicketBoard({
           <button className="text-gray-400 hover:text-gray-600 transition-colors">
             <SunIcon />
           </button>
-          <div className="relative">
             <button className="text-gray-400 hover:text-gray-600 transition-colors">
               <BellIcon />
             </button>
             <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full" />
-          </div>
+          
           <div className="w-px h-5 bg-gray-200" />
           <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-xs font-bold text-white">
             AM

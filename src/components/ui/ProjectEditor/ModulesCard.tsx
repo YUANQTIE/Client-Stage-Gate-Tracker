@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState,useEffect } from "react";
+import { ticketSelect } from "@/actions/ticketActions";
 
 interface Workflow {
   id: string;
@@ -14,13 +15,13 @@ interface ModulesCardProps {
   activePhase: number;
 }
 
-const workflowsData: Workflow[] = [
+var workflowsData: Workflow[] = [
   {
     id: "1",
     name: "User Login Flow",
     tags: ["Frontend"],
-    ticketCount: 8,
-    progress: 75,
+    ticketCount: 0,
+    progress: 0,
   },
   {
     id: "2",
@@ -45,6 +46,40 @@ export function ModulesCard({ activePhase }: ModulesCardProps) {
     };
     setWorkflows([...workflows, newWorkflow]);
   };
+
+	useEffect(()=>{
+			(async () => {
+				const tickets = await ticketSelect();
+				const statusValues = {
+          PENDING: 0,
+          IN_PROGRESS: 0,
+          FINISHED: 1,
+        };
+
+        // 2. Sum up the values using reduce
+        const totalScore = tickets.reduce((sum, ticket) => {
+          return sum + (statusValues[ticket.status] || 0);
+        }, 0);
+
+        const totalTickets = tickets.reduce((sum, ticket) => {
+          return sum + 1;
+        }, 0);
+
+				const progressPercentage = Math.round((totalScore / tickets.length) * 100);
+
+				setWorkflows((prevWorkflows) => {
+          const updatedWorkflows = [...prevWorkflows];
+          // Update the first workflow's progress
+          updatedWorkflows[0] = { 
+            ...updatedWorkflows[0], 
+            progress: progressPercentage,
+						ticketCount: totalTickets
+          };
+          return updatedWorkflows;
+        });
+
+			})();
+	},[]);
 
   return (
     <div className="mb-8">
