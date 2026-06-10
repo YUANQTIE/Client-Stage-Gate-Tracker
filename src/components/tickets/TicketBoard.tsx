@@ -16,9 +16,10 @@ import { TicketCardContent } from "./TicketCard";
 import TicketColumn from "./TicketColumn";
 import CreateTicketModal from "./CreateTicketModal";
 import EditTicketModal from "./EditTicketModal";
+import TopNav from "@/components/layout/TopNav";
 import { COLUMNS } from "./types";
 
-import { Prisma } from "@/lib/generated/prisma"; 
+import { Prisma } from "@/lib/generated/prisma";
 import { ticketSelect, ticketUpdateStatus, ticketCreate,ticketDelete, type Ticket } from "@/actions/ticketActions";
 // ── Icons ─────────────────────────────────────────────────────────────────────
 
@@ -53,66 +54,6 @@ function PlusIcon() {
     >
       <line x1="12" y1="5" x2="12" y2="19" />
       <line x1="5" y1="12" x2="19" y2="12" />
-    </svg>
-  );
-}
-
-function BellIcon() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.8}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-    </svg>
-  );
-}
-
-function SunIcon() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.8}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="12" cy="12" r="5" />
-      <line x1="12" y1="1" x2="12" y2="3" />
-      <line x1="12" y1="21" x2="12" y2="23" />
-      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-      <line x1="1" y1="12" x2="3" y2="12" />
-      <line x1="21" y1="12" x2="23" y2="12" />
-      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
-      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
-    </svg>
-  );
-}
-
-function ChevronRightIcon() {
-  return (
-    <svg
-      width="12"
-      height="12"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <polyline points="9 18 15 12 9 6" />
     </svg>
   );
 }
@@ -247,37 +188,7 @@ export default function TicketBoard({
 
   return (
     <div className="flex flex-col h-full bg-slate-50">
-      {/* Top header bar */}
-      <header className="flex items-center justify-between px-6 py-3 bg-white border-b border-gray-100 shrink-0">
-        {/* Breadcrumb */}
-        <nav className="flex items-center gap-1.5 text-sm text-gray-500">
-          <span className="hover:text-gray-700 cursor-pointer transition-colors">
-            Acesoft
-          </span>
-          <ChevronRightIcon />
-          <span className="hover:text-gray-700 cursor-pointer transition-colors">
-            Project Alpha
-          </span>
-          <ChevronRightIcon />
-          <span className="text-gray-800 font-medium">Tickets</span>
-        </nav>
-
-        {/* Utility icons */}
-        <div className="flex items-center gap-3">
-          <button className="text-gray-400 hover:text-gray-600 transition-colors">
-            <SunIcon />
-          </button>
-            <button className="text-gray-400 hover:text-gray-600 transition-colors">
-              <BellIcon />
-            </button>
-            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full" />
-          
-          <div className="w-px h-5 bg-gray-200" />
-          <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-xs font-bold text-white">
-            AM
-          </div>
-        </div>
-      </header>
+      <TopNav breadcrumbs={["Acesoft", "Project Alpha", "Tickets"]} />
 
       {/* Sprint header */}
       <div className="flex items-center justify-between px-6 py-5 shrink-0">

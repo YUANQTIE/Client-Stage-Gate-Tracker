@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Prisma } from "@/lib/generated/prisma"; 
 import { type Ticket , tagSelect} from "@/actions/ticketActions";
 import { userSelect } from "@/actions/userActions";
-import Input from '@/components/ui/input';
+import { Input } from '@/components/ui/input';
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 
