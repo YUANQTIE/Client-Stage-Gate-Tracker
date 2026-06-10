@@ -1,20 +1,35 @@
-import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
+// src/app/layout.tsx
+import type { Metadata } from "next";
+import { Hanken_Grotesk, JetBrains_Mono } from "next/font/google";
+import "@/app/globals.css";
 
-export default async function AppLayout({
+const hankenGrotesk = Hanken_Grotesk({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700", "800"],
+  variable: "--font-hanken-grotesk",
+  display: "swap",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-jetbrains-mono",
+  display: "swap",
+});
+
+export const metadata: Metadata = {
+  title: "Client Stage Gate Tracker",
+  description: "Acesoft project tracker",
+};
+
+export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getClaims();
-
-  if (!data?.claims) redirect("/login");
-
+}>) {
   return (
-    <div className="flex min-h-screen">
-      {/* Sidebar will go here */}
-      <main className="flex-1">{children}</main>
-    </div>
+    // <html lang="en" className={`${hankenGrotesk.variable} ${jetbrainsMono.variable}`} suppressHydrationWarning>
+    //   <body className="font-['Hanken_Grotesk'] antialiased" suppressHydrationWarning>{children}</body>
+    // </html>
+		<>{children}</>
   );
 }
