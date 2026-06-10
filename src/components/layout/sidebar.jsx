@@ -54,7 +54,7 @@ export default function SidebarLayout({ children }) {
       </div>
 
       {/* Page content */}
-      <div className="flex-1 p-8">
+      <div className="flex-1 overflow-hidden">
         {children ?? (
           <>
             <h1 className="text-xl font-semibold text-gray-800">{active}</h1>
