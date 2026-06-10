@@ -21,23 +21,37 @@ export default function LoginPage() {
   const router = useRouter()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  // const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const supabase = createClient()
   const {user} = useAuth()
 
 
   const handleSignIn = async (e: React.SubmitEvent) => {
     e.preventDefault()
-    // setError(null)
+    setError(null)
     const {error} = await supabase.auth.signInWithPassword({email, password})
-    if (error)
+    
+    let error_message = null
+
+    if (email == "" && password == "")
+      error_message = "Email and Password are missing"
+    else if (email == "")
+      error_message = "Email is missing"
+    else if (password == "")
+      error_message = "Password is missing"
+    else if (error)
+      error_message = error.message
+    
+    if(error_message)
     {
-      // setError(error.message)
+      setError(error_message)
       return
     }
-
     //CHANGE INITIAL PAGE HERE
     router.push('/projects/demo/workflows/sprint-1/tickets')
+    
+
+    
   }
 
   return (
@@ -99,7 +113,8 @@ export default function LoginPage() {
                   <Input
                     id="password"
                     type={showPassword ? 'text' : 'password'}
-                    defaultValue="••••••••"
+                    defaultValue=""
+                    placeholder="Input password here.."
                     className="pr-11"
                     onChange={e => {setPassword(e.target.value)}}
                   />
@@ -122,6 +137,13 @@ export default function LoginPage() {
                   </button>
                 </div>
               </div>
+
+              {error && (
+                <p className="text-sm text-red-600 bg-red-50 border border-red-200
+                  rounded-md px-3 py-2">
+                {error}
+                </p>
+              )}
 
               <Button type="submit">Sign In</Button>
             </form>
