@@ -64,6 +64,7 @@ export default function CreateTicketModal({ isOpen, onClose, onCreateTicket }: C
   const [description, setDescription] = useState('');
   const [type, setType] = useState('');
   const [deadline, setDeadline] = useState('');
+  const today = new Date().toISOString().split('T')[0];
 
 	const [tags, setTags] = useState<string[]>([]);
 	const [tagsOpen, setTagsOpen] = useState(false);
@@ -174,8 +175,13 @@ export default function CreateTicketModal({ isOpen, onClose, onCreateTicket }: C
               placeholder="e.g., Update Landing Page Hero"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
+			  maxLength={25}
               required
             />
+
+			<p className="text-xs text-gray-500 text-right">
+				{title.length}/25
+			</p>
           </div>
 
           {/* Description */}
@@ -352,13 +358,15 @@ export default function CreateTicketModal({ isOpen, onClose, onCreateTicket }: C
 								type="date"
 								value={deadline}
 								onChange={(e) => setDeadline(e.target.value)}
+								min={today}
 								className="text-gray-500"
 							/>
 						</div>
           </div>
 
           {/* Attachments */}
-          <div className="space-y-1.5">
+		  {/* 
+          <div className="space-y-1.5"> 
             <label className="text-sm font-medium text-gray-700">Attachments</label>
             <div className="border-2 border-dashed border-indigo-200 rounded-xl bg-indigo-50/50 p-8 text-center cursor-pointer hover:bg-indigo-50 transition-colors">
               <div className="flex justify-center mb-2">
@@ -370,7 +378,7 @@ export default function CreateTicketModal({ isOpen, onClose, onCreateTicket }: C
               <p className="text-sm text-gray-500 mt-0.5">or drag and drop</p>
               <p className="text-xs text-gray-400 mt-1">PNG, JPG, PDF up to 10MB</p>
             </div>
-          </div>
+          </div>*/}
         </form>
 
         {/* Footer */}
