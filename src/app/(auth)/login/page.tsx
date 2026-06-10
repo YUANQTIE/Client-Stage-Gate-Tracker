@@ -21,18 +21,18 @@ export default function LoginPage() {
   const router = useRouter()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  // const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const supabase = createClient()
   const {user} = useAuth()
 
 
   const handleSignIn = async (e: React.SubmitEvent) => {
     e.preventDefault()
-    // setError(null)
+    setError(null)
     const {error} = await supabase.auth.signInWithPassword({email, password})
     if (error)
     {
-      // setError(error.message)
+      setError(error.message)
       return
     }
 
@@ -99,7 +99,8 @@ export default function LoginPage() {
                   <Input
                     id="password"
                     type={showPassword ? 'text' : 'password'}
-                    defaultValue="••••••••"
+                    defaultValue=""
+                    placeholder="Input password here.."
                     className="pr-11"
                     onChange={e => {setPassword(e.target.value)}}
                   />
@@ -122,6 +123,13 @@ export default function LoginPage() {
                   </button>
                 </div>
               </div>
+
+              {error && (
+                <p className="text-sm text-red-600 bg-red-50 border border-red-200
+                  rounded-md px-3 py-2">
+                {error}
+                </p>
+              )}
 
               <Button type="submit">Sign In</Button>
             </form>
