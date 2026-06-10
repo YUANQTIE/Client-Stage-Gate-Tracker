@@ -37,7 +37,7 @@ export default function LoginPage() {
     }
 
     //CHANGE INITIAL PAGE HERE
-    router.push('/dashboard')
+    router.push('/projects/demo/workflows/sprint-1/tickets')
   }
 
   return (
