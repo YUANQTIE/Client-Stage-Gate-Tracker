@@ -162,14 +162,15 @@ export function TicketCardContent({ ticket, onSelect, onEdit, onDelete }: CardCo
     }
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [menuOpen]);
-
+	const today = new Date();
+	today.setHours(0,0,0,0)
   return (
     <div
       onClick={() => onSelect(ticket)}
       className={[
         'bg-white rounded-xl p-4 border border-gray-200 cursor-pointer relative',
         'hover:border-gray-300 transition-colors duration-150 select-none',
-        ticket.deadline_date < new Date() ? 'border-l-4 border-l-red-500' : '',
+        ticket.deadline_date < today ? 'border-l-4 border-l-red-500' : '',
       ].join(' ')}
     >
       {/* Top row: ID + badges + menu */}
@@ -186,7 +187,7 @@ export function TicketCardContent({ ticket, onSelect, onEdit, onDelete }: CardCo
               Active
             </span>
           )} */}
-          {ticket.deadline_date < new Date() && (
+          {ticket.deadline_date < today && (
             <span className="text-[10px] font-semibold tracking-wide text-red-600 bg-red-50 px-2 py-0.5 rounded-full uppercase">
               Overdue
             </span>
@@ -255,10 +256,10 @@ export function TicketCardContent({ ticket, onSelect, onEdit, onDelete }: CardCo
         {ticket.deadline_date ? (
           <div
             className={`flex items-center gap-1 text-xs font-medium ${
-              ticket.deadline_date < new Date() ? 'text-red-500' : 'text-gray-400'
+              ticket.deadline_date < today ? 'text-red-500' : 'text-gray-400'
             }`}
           >
-            {ticket.deadline_date < new Date() ? (
+            {ticket.deadline_date < today ? (
               <AlertTriangleIcon className="text-red-500" />
             ) : (
               <CalendarIcon />
