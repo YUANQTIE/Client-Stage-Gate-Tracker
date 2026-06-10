@@ -265,9 +265,17 @@ export default function EditTicketModal({ ticket: initialTicket, isOpen, onClose
                           key={user.user_id}
                           onClick={() => {
                             setTicket(t => t ? {
-                              ...t,
-                              TicketAssigned: [...t.TicketAssigned, { user_id: user.user_id, Users: { name: user.name } }]
-                            } : t);
+															...t,
+															TicketAssigned: [
+																...t.TicketAssigned,
+																{ 
+																	ticket_id: t.ticket_id, 
+																	user_id: user.user_id, 
+																	assigned_date: new Date(), 
+																	Users: user 
+																}
+															]
+														} : t);
                             setShowAssignDropdown(false);
                           }}
                           className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 transition-colors"
