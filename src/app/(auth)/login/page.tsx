@@ -30,14 +30,28 @@ export default function LoginPage() {
     e.preventDefault()
     setError(null)
     const {error} = await supabase.auth.signInWithPassword({email, password})
-    if (error)
+    
+    let error_message = null
+
+    if (email == "" && password == "")
+      error_message = "Email and Password are missing"
+    else if (email == "")
+      error_message = "Email is missing"
+    else if (password == "")
+      error_message = "Password is missing"
+    else if (error)
+      error_message = error.message
+    
+    if(error_message)
     {
-      setError(error.message)
+      setError(error_message)
       return
     }
-
     //CHANGE INITIAL PAGE HERE
     router.push('/projects/demo/workflows/sprint-1/tickets')
+    
+
+    
   }
 
   return (
