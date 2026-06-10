@@ -1,11 +1,13 @@
 "use server";
 
-import { prisma } from "@/lib/prisma";
-import { Prisma } from "@/lib/generated/prisma"; 
+import { PrismaClient } from "@/lib/generated/prisma";
+import { Users } from "@/lib/generated/prisma";
+
+const prisma = new PrismaClient();
 
 export async function userSelect() {
-  // Query auth.users (likely just called 'users')
-  const users = await prisma.users.findMany();
-  
+  const users = await prisma.$queryRaw<Users[]>`
+    SELECT * FROM public."Users"
+  `;
   return users;
 }
