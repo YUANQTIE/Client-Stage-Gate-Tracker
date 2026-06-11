@@ -19,8 +19,15 @@ import EditTicketModal from "./EditTicketModal";
 import TopNav from "@/components/layout/TopNav";
 import { COLUMNS } from "./types";
 
+import { useAuth } from "@/app/(auth)/context/auth_provider";
 import { Prisma } from "@/lib/generated/prisma";
-import { ticketSelect, ticketUpdateStatus, ticketCreate,ticketDelete, type Ticket } from "@/actions/ticketActions";
+import {
+  ticketSelect,
+  ticketUpdateStatus,
+  ticketCreate,
+  ticketDelete,
+  type Ticket,
+} from "@/actions/ticketActions";
 // ── Icons ─────────────────────────────────────────────────────────────────────
 
 function FilterIcon() {
@@ -69,7 +76,7 @@ export default function TicketBoard({
   projectId,
   workflowId,
 }: TicketBoardProps) {
-	// Initialize state using Ticket directly
+  // Initialize state using Ticket directly
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -78,6 +85,7 @@ export default function TicketBoard({
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const wasDraggingRef = useRef(false);
+  const { user } = useAuth();
 
   const mouseSensor = useSensor(MouseSensor, {
     activationConstraint: { distance: 8 },
@@ -87,7 +95,9 @@ export default function TicketBoard({
   });
   const sensors = useSensors(mouseSensor, touchSensor);
 
-  const activeTicket = activeId ? tickets.find((t) => t.ticket_id === activeId) : null;
+  const activeTicket = activeId
+    ? tickets.find((t) => t.ticket_id === activeId)
+    : null;
 
   async function loadDatabaseTickets() {
     try {
@@ -111,39 +121,42 @@ export default function TicketBoard({
     setSlideOverOpen(true);
   }
 
-  async function handleCreateTicket(newTicketData: Partial<Ticket>, tagIds: string[] = [],assignedIds: string[] = []) 
-	{
-		const previousTickets = tickets;
-		try {
-			const newTicket = await ticketCreate(
-				{
-					name: newTicketData.name ?? "New Ticket",
-					description: newTicketData.description ?? null,
-					status: newTicketData.status ?? "PENDING",
-					assigner_id: newTicketData.assigner_id || null,
-					watcher_id: newTicketData.watcher_id ?? null,
-					deadline_date: newTicketData.deadline_date ?? new Date(),
-				},
-				tagIds,assignedIds
-			);
-			setTickets(prev => [...prev, newTicket]);
-		} catch (error) {
-			setTickets(previousTickets);
-			console.error("Failed to create ticket:", error);
-		}
-	}
+  async function handleCreateTicket(
+    newTicketData: Partial<Ticket>,
+    tagIds: string[] = [],
+    assignedIds: string[] = [],
+  ) {
+    const previousTickets = tickets;
+    try {
+      const newTicket = await ticketCreate(
+        {
+          name: newTicketData.name ?? "New Ticket",
+          description: newTicketData.description ?? null,
+          status: newTicketData.status ?? "PENDING",
+          assigner_id: user?.id,
+          watcher_id: newTicketData.watcher_id ?? null,
+          deadline_date: newTicketData.deadline_date ?? new Date(),
+        },
+        tagIds,
+        assignedIds,
+      );
+      setTickets((prev) => [...prev, newTicket]);
+    } catch (error) {
+      setTickets(previousTickets);
+      console.error("Failed to create ticket:", error);
+    }
+  }
 
-  async function handleDeleteTicket(ticketId: string) 
-	{
-		const previousTickets = tickets;
-		try {
-			setTickets(prev => prev.filter(t => t.ticket_id !== ticketId));
-			await ticketDelete(ticketId);
-		} catch (error) {
-			setTickets(previousTickets);
-			console.error("Failed to delete ticket:", error);
-		}
-	}
+  async function handleDeleteTicket(ticketId: string) {
+    const previousTickets = tickets;
+    try {
+      setTickets((prev) => prev.filter((t) => t.ticket_id !== ticketId));
+      await ticketDelete(ticketId);
+    } catch (error) {
+      setTickets(previousTickets);
+      console.error("Failed to delete ticket:", error);
+    }
+  }
 
   function handleDragStart(event: DragStartEvent) {
     setActiveId(event.active.id as string);
@@ -151,37 +164,39 @@ export default function TicketBoard({
   }
 
   async function handleDragEnd(event: DragEndEvent) {
-		const { active, over } = event;
-		setActiveId(null);
+    const { active, over } = event;
+    setActiveId(null);
 
-		if (over && active.id !== over.id) {
-			const newStatus = over.id as Ticket['status'];
-			const previousTickets = tickets; // snapshot before updating
+    if (over && active.id !== over.id) {
+      const newStatus = over.id as Ticket["status"];
+      const previousTickets = tickets; // snapshot before updating
 
-			setTickets((prev) =>
-				prev.map((t) =>
-					t.ticket_id === active.id ? { ...t, status: newStatus } : t
-				)
-			);
+      setTickets((prev) =>
+        prev.map((t) =>
+          t.ticket_id === active.id ? { ...t, status: newStatus } : t,
+        ),
+      );
 
-			try {
-				await ticketUpdateStatus(active.id as string, newStatus);
-			} catch (error) {
-				setTickets(previousTickets); // roll back to snapshot
-				console.error("Failed to update ticket status:", error);
-			}
-		}
+      try {
+        await ticketUpdateStatus(active.id as string, newStatus);
+      } catch (error) {
+        setTickets(previousTickets); // roll back to snapshot
+        console.error("Failed to update ticket status:", error);
+      }
+    }
 
-		setTimeout(() => {
-			wasDraggingRef.current = false;
-		}, 100);
-	}
+    setTimeout(() => {
+      wasDraggingRef.current = false;
+    }, 100);
+  }
 
   // 6. Handle loading screen while data transfers from server
   if (isLoading) {
     return (
       <div className="flex h-full items-center justify-center bg-slate-50">
-        <div className="text-gray-500 font-medium animate-pulse">Loading database tickets...</div>
+        <div className="text-gray-500 font-medium animate-pulse">
+          Loading database tickets...
+        </div>
       </div>
     );
   }
@@ -237,15 +252,15 @@ export default function TicketBoard({
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <div className="flex-1 overflow-x-auto overflow-y-hidden px-6 pb-6">
-          <div className="flex gap-5 h-full items-start">
+        <div className="flex-1 overflow-x-auto px-6 pb-6 min-h-0">
+          <div className="flex gap-5 h-full">
             {COLUMNS.map((column) => (
               <TicketColumn
                 key={column.id}
                 column={column}
-								tickets={tickets.filter((t) => t.status === column.id)}
-								onSelectTicket={handleSelectTicket}
-								onDeleteTicket={handleDeleteTicket}
+                tickets={tickets.filter((t) => t.status === column.id)}
+                onSelectTicket={handleSelectTicket}
+                onDeleteTicket={handleDeleteTicket}
               />
             ))}
           </div>
@@ -255,7 +270,12 @@ export default function TicketBoard({
         <DragOverlay dropAnimation={null}>
           {activeTicket ? (
             <div className="rotate-2 opacity-90">
-              <TicketCardContent ticket={activeTicket} onSelect={() => {}}  onEdit={() => {}}  onDelete={() => {}}/>
+              <TicketCardContent
+                ticket={activeTicket}
+                onSelect={() => {}}
+                onEdit={() => {}}
+                onDelete={() => {}}
+              />
             </div>
           ) : null}
         </DragOverlay>
@@ -263,11 +283,15 @@ export default function TicketBoard({
 
       {/* Ticket detail slide-over */}
       <EditTicketModal
-				ticket={selectedTicket}
-				isOpen={slideOverOpen}
-				onClose={() => setSlideOverOpen(false)}
-				onUpdate={(updated) => setTickets(prev => prev.map(t => t.ticket_id === updated.ticket_id ? updated : t))}
-			/>
+        ticket={selectedTicket}
+        isOpen={slideOverOpen}
+        onClose={() => setSlideOverOpen(false)}
+        onUpdate={(updated) =>
+          setTickets((prev) =>
+            prev.map((t) => (t.ticket_id === updated.ticket_id ? updated : t)),
+          )
+        }
+      />
 
       {/* Create ticket modal */}
       <CreateTicketModal

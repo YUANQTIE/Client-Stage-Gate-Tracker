@@ -23,7 +23,7 @@ export default function TicketColumn({
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
 
   return (
-    <div className="flex flex-col w-90 shrink-0 select-none">
+    <div className="flex flex-col w-90 shrink-0 select-none h-full">
       {/* Column header */}
       <div className="flex items-center gap-2 mb-2.5 px-1">
         <span className={`w-2 h-2 rounded-full ${column.dotColor}`} />
@@ -36,7 +36,7 @@ export default function TicketColumn({
       {/* Container + cards drop zone */}
       <div
         ref={setNodeRef}
-        className={`flex flex-col gap-2 flex-1 rounded-xl p-2.5 border transition-colors duration-150 min-h-[400px] ${
+        className={`flex flex-col gap-2 flex-1 rounded-xl p-2.5 border transition-colors duration-150 overflow-y-auto min-h-0 scrollbar-thin ${
           isOver ? 'bg-indigo-50 border-indigo-200' : 'bg-[#F2F3FF] border-gray-200'
         }`}
       >
