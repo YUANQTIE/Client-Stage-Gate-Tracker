@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '../context/auth_provider'
+import { AuthError } from '@supabase/supabase-js'
 
 const hanken = Hanken_Grotesk({
   subsets: ['latin'],
@@ -50,8 +51,39 @@ export default function LoginPage() {
     //CHANGE INITIAL PAGE HERE
     router.push('/projects/demo/workflows/sprint-1/tickets')
     
+  }
 
+  const handleSignUp = async (e: React.SubmitEvent) => {
+    e.preventDefault()
+    setError(null)
+    const {error} = await supabase.auth.signUp({
+      email: email,
+      password: password,
+    })
     
+    let error_message = handleError(error)
+    
+    if(error_message)
+    {
+      setError(error_message)
+      return
+    }
+    //CHANGE INITIAL PAGE HERE
+    router.push('/projects/demo/workflows/sprint-1/tickets')
+    
+  }
+
+  function handleError(error: AuthError | null){
+    if (email == "" && password == "")
+      return "Email and Password are missing"
+    else if (email == "")
+      return "Email is missing"
+    else if (password == "")
+      return "Password is missing"
+    else if (error)
+      return error.message
+    else
+      return null
   }
 
   return (
