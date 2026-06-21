@@ -3,14 +3,14 @@
 import { forwardRef, useImperativeHandle, useState } from "react";
 import { Phase } from "@/app/(app)/editor/page";
 
-interface StageGateStepperProps {
+interface StageStepperProps {
   phases: Phase[];
   setPhases: (phases: Phase[]) => void;
   activePhase: number;
   setActivePhase: (phase: number) => void;
 }
 
-export const StageGateStepper = forwardRef<{ openCreateModal: () => void }, StageGateStepperProps>(
+export const StageStepper = forwardRef<{ openCreateModal: () => void }, StageStepperProps>(
   ({ phases, setPhases, activePhase, setActivePhase }, ref) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
@@ -168,7 +168,7 @@ export const StageGateStepper = forwardRef<{ openCreateModal: () => void }, Stag
                     </div>
 
                     {/* Diamond Gate - positioned between phases */}
-                    {idx < phases.length - 1 && (
+                    {/* {idx < phases.length - 1 && (
                       <div className="absolute -right-[calc(15%-20px)] top-3">
                         <div className="relative">
                           <div className={`w-6 h-6 border-2 rotate-45 border-[#CBD5E1] transition-all duration-200
@@ -183,7 +183,7 @@ export const StageGateStepper = forwardRef<{ openCreateModal: () => void }, Stag
                           </div>
                         </div>
                       </div>
-                    )}
+                    )} */}
                   </div>
                 );
               })}
@@ -309,4 +309,4 @@ export const StageGateStepper = forwardRef<{ openCreateModal: () => void }, Stag
   }
 );
 
-StageGateStepper.displayName = 'StageGateStepper';
+StageStepper.displayName = 'StageStepper';

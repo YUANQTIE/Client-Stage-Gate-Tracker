@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import {
-  StageGateStepper,
+  StageStepper,
   ActivePhaseDetails,
   ModulesCard,
 } from "@/components/ui/ProjectEditor";
@@ -136,7 +136,7 @@ export default function EditorPage() {
         </div>
 
         {/* Stage-Gate Pipeline Stepper */}
-        <StageGateStepper 
+        <StageStepper 
           ref={stepperRef}
           phases={phases}
           setPhases={setPhases}
