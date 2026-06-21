@@ -28,6 +28,7 @@ export type ContractStatus =
 export interface UserType {
   user_id: string,
   name: string,
+  phone: string,
   image_id: string,
   client_id: string, 
   department_id: string,
