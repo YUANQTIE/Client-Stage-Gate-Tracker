@@ -13,6 +13,8 @@ export function ModulesCard({ activePhase, phases, setPhases }: ModulesCardProps
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingModule, setEditingModule] = useState<Module | null>(null);
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set(["1"]));
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [moduleToDelete, setModuleToDelete] = useState<string | null>(null);
 
   // Get modules for the current active phase
   const currentPhase = phases.find(p => p.number === activePhase);
@@ -102,6 +104,28 @@ export function ModulesCard({ activePhase, phases, setPhases }: ModulesCardProps
     closeModal();
   };
 
+  const confirmDelete = (moduleId: string) => {
+    setModuleToDelete(moduleId);
+    setIsDeleteConfirmOpen(true);
+    closeModal(); // Close the edit modal if it's open
+  };
+
+  const handleDeleteModule = () => {
+    if (moduleToDelete === null) return;
+    
+    const updatedPhases = phases.map((phase) => {
+      if (phase.number !== activePhase) return phase;
+      return {
+        ...phase,
+        modules: phase.modules.filter((m) => m.id !== moduleToDelete),
+      };
+    });
+    setPhases(updatedPhases);
+    
+    setIsDeleteConfirmOpen(false);
+    setModuleToDelete(null);
+  };
+
   const addWorkflow = (moduleId: string) => {
     const newWorkflow: Workflow = {
       id: Date.now().toString(),
@@ -124,19 +148,6 @@ export function ModulesCard({ activePhase, phases, setPhases }: ModulesCardProps
     });
 
     setPhases(updatedPhases);
-  };
-
-  const deleteModule = (moduleId: string) => {
-    if (confirm("Are you sure you want to delete this module?")) {
-      const updatedPhases = phases.map((phase) => {
-        if (phase.number !== activePhase) return phase;
-        return {
-          ...phase,
-          modules: phase.modules.filter((m) => m.id !== moduleId),
-        };
-      });
-      setPhases(updatedPhases);
-    }
   };
 
   const roleColors = ["#4F46E5", "#006C49", "#D97706", "#DC2626", "#7C3AED"];
@@ -334,7 +345,9 @@ export function ModulesCard({ activePhase, phases, setPhases }: ModulesCardProps
               {editingModule ? "Edit Module" : "Create New Module"}
             </h2>
             <p className="text-sm text-[#64748B] mb-6">
-              {editingModule ? "Update the module details below." : "Fill in the details to create a new module for Phase {activePhase}."}
+              {editingModule 
+                ? "Update the module details below." 
+                : `Fill in the details to create a new module for Phase ${activePhase}.`}
             </p>
 
             <div className="space-y-4">
@@ -381,18 +394,65 @@ export function ModulesCard({ activePhase, phases, setPhases }: ModulesCardProps
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-[#F1F5F9]">
+            <div className="flex justify-between items-center mt-6 pt-4 border-t border-[#F1F5F9]">
+              {/* Delete button - only show when editing */}
+              {editingModule && (
+                <button
+                  onClick={() => confirmDelete(editingModule.id)}
+                  className="px-4 py-2 text-sm font-semibold text-[#EF4444] hover:text-[#DC2626] hover:bg-[#FEE2E2] rounded-lg transition-colors flex items-center gap-2"
+                >
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M12 4L4 12M4 4L12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                  Delete Module
+                </button>
+              )}
+              
+              <div className="flex gap-3 ml-auto">
+                <button
+                  onClick={closeModal}
+                  className="px-4 py-2 text-sm font-semibold text-[#64748B] hover:text-[#0F172A] transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveModule}
+                  className="px-4 py-2 bg-[#4F46E5] text-white text-sm font-semibold rounded-lg hover:bg-[#4338CA] transition-all shadow-sm"
+                >
+                  {editingModule ? "Save Changes" : "Create Module"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {isDeleteConfirmOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 relative">
+            <h2 className="text-xl font-bold text-[#0F172A] mb-2">
+              Delete Module
+            </h2>
+            <p className="text-sm text-[#64748B] mb-6">
+              Are you sure you want to delete this module? This action cannot be undone.
+            </p>
+
+            <div className="flex justify-end gap-3">
               <button
-                onClick={closeModal}
+                onClick={() => {
+                  setIsDeleteConfirmOpen(false);
+                  setModuleToDelete(null);
+                }}
                 className="px-4 py-2 text-sm font-semibold text-[#64748B] hover:text-[#0F172A] transition-colors"
               >
                 Cancel
               </button>
               <button
-                onClick={handleSaveModule}
-                className="px-4 py-2 bg-[#4F46E5] text-white text-sm font-semibold rounded-lg hover:bg-[#4338CA] transition-all shadow-sm"
+                onClick={handleDeleteModule}
+                className="px-4 py-2 bg-[#EF4444] text-white text-sm font-semibold rounded-lg hover:bg-[#DC2626] transition-all shadow-sm"
               >
-                {editingModule ? "Save Changes" : "Create Module"}
+                Delete Module
               </button>
             </div>
           </div>

@@ -1,30 +1,25 @@
 "use client";
 
+import { Phase } from "@/app/(app)/editor/page";
+
 interface ActivePhaseDetailsProps {
   activePhase: number;
+  phases: Phase[];
+  setPhases: (phases: Phase[]) => void;
 }
 
-export function ActivePhaseDetails({ activePhase }: ActivePhaseDetailsProps) {
-  const phaseData = {
-    1: {
-      name: "Discovery & Research",
-      description: "Initial market research, competitor analysis, and requirement gathering from stakeholders.",
-    },
-    2: {
-      name: "Core Development & Integration",
-      description: "Implementation of core backend services, identity provider integration, and primary user dashboards.",
-    },
-    3: {
-      name: "Beta Launch & Testing",
-      description: "Internal beta testing, user acceptance testing, and performance optimization.",
-    },
-    4: {
-      name: "Production Deployment",
-      description: "Final deployment to production, monitoring setup, and post-launch support.",
-    },
-  };
+export function ActivePhaseDetails({ activePhase, phases, setPhases }: ActivePhaseDetailsProps) {
+  const currentPhase = phases.find(p => p.number === activePhase) || phases[0];
 
-  const currentPhase = phaseData[activePhase as keyof typeof phaseData] || phaseData[2];
+  const updatePhase = (field: keyof Phase, value: string) => {
+    setPhases(
+      phases.map(p =>
+        p.number === activePhase
+          ? { ...p, [field]: value }
+          : p
+      )
+    );
+  };
 
   return (
     <div className="bg-white border border-[#E2E8F0] rounded-xl shadow-sm mb-8 relative">
@@ -63,8 +58,8 @@ export function ActivePhaseDetails({ activePhase }: ActivePhaseDetailsProps) {
             </label>
             <input
               type="text"
-              value={currentPhase.name}
-              onChange={() => {}}
+              value={currentPhase?.name || ""}
+              onChange={(e) => updatePhase("name", e.target.value)}
               className="w-full px-3 py-2 bg-white border border-[#CBD5E1] rounded-lg text-sm text-[#0F172A] focus:outline-none focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5] transition-all"
             />
           </div>
@@ -73,8 +68,8 @@ export function ActivePhaseDetails({ activePhase }: ActivePhaseDetailsProps) {
               Description
             </label>
             <textarea
-              value={currentPhase.description}
-              onChange={() => {}}
+              value={currentPhase?.description || ""}
+              onChange={(e) => updatePhase("description", e.target.value)}
               rows={2}
               className="w-full px-3 py-2 bg-white border border-[#CBD5E1] rounded-lg text-sm text-[#0F172A] resize-none focus:outline-none focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5] transition-all"
             />
