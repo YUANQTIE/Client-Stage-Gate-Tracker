@@ -37,7 +37,30 @@ const defaultPhases: Phase[] = [
     name: "Phase 1", 
     subtitle: "Discovery", 
     description: "Initial market research, competitor analysis, and requirement gathering from stakeholders.",
-    modules: []
+    modules: [
+      {
+        id: "1",
+        name: "Authentication & Identity",
+        description: "SSO, JWT, User Roles",
+        roles: ["Frontend", "Backend", "DevOps"],
+        workflows: [
+          {
+            id: "1",
+            name: "User Login Flow",
+            tags: ["Frontend"],
+            ticketCount: 8,
+            progress: 75,
+          },
+          {
+            id: "2",
+            name: "Password Reset",
+            tags: ["Backend"],
+            ticketCount: 3,
+            progress: 30,
+          },
+        ],
+      },
+    ]
   },
   { 
     number: 2, 
@@ -74,13 +97,6 @@ const defaultPhases: Phase[] = [
     name: "Phase 3", 
     subtitle: "Production", 
     description: "Internal beta testing, user acceptance testing, and performance optimization.",
-    modules: []
-  },
-  { 
-    number: 4, 
-    name: "Phase 4", 
-    subtitle: "Deployment", 
-    description: "Final deployment to production, monitoring setup, and post-launch support.",
     modules: []
   },
 ];
