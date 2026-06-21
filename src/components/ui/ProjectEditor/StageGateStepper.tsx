@@ -120,7 +120,7 @@ export function StageGateStepper({ activePhase, setActivePhase }: StageGateStepp
         </div>
 
         {/* Connecting Line */}
-        <div className="absolute left-[calc(8%+20px)] right-[calc(8%+20px)] top-[calc(50%+4px)] h-[2px] bg-[#E2E8F0] -translate-y-1/2" />
+        <div className="absolute left-[calc(8%+20px)] right-[calc(8%+20px)] top-[calc(50%+4px)] h-0.5 bg-[#E2E8F0] -translate-y-1/2" />
       </div>
     </div>
   );

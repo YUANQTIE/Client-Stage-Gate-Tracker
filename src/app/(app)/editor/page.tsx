@@ -13,7 +13,7 @@ export default function EditorPage() {
 
   return (
     <div className="bg-[#F8FAFC] min-h-screen">
-      <div className="max-w-[1400px] mx-auto p-8">
+      <div className="max-w-350 mx-auto p-8">
         {/* Header */}
         <div className="flex justify-between items-end pb-6 mb-6 border-b border-[#E2E8F0]">
           <div>
@@ -47,7 +47,7 @@ export default function EditorPage() {
         <ModulesCard activePhase={activePhase} />
 
         {/* Screen & API Tracker */}
-        <ScreenApiTracker />
+        {/* <ScreenApiTracker /> */}
       </div>
     </div>
   );
