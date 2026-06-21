@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Module, Workflow, Phase } from "@/app/(app)/editor/page";
+import { Module, Phase, Workflow } from "@/app/(app)/editor/page";
+import { WorkflowsList } from "./WorkflowsList";
 
 interface ModulesCardProps {
   activePhase: number;
@@ -10,7 +11,7 @@ interface ModulesCardProps {
 }
 
 export function ModulesCard({ activePhase, phases, setPhases }: ModulesCardProps) {
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isModuleModalOpen, setIsModuleModalOpen] = useState(false);
   const [editingModule, setEditingModule] = useState<Module | null>(null);
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set(["1"]));
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
@@ -20,8 +21,8 @@ export function ModulesCard({ activePhase, phases, setPhases }: ModulesCardProps
   const currentPhase = phases.find(p => p.number === activePhase);
   const modules = currentPhase?.modules || [];
 
-  // Modal form state
-  const [formData, setFormData] = useState({
+  // Module form state
+  const [moduleFormData, setModuleFormData] = useState({
     name: "",
     description: "",
     roles: "",
@@ -39,50 +40,49 @@ export function ModulesCard({ activePhase, phases, setPhases }: ModulesCardProps
     });
   };
 
-  const openCreateModal = () => {
+  // Module CRUD operations
+  const openCreateModuleModal = () => {
     setEditingModule(null);
-    setFormData({ name: "", description: "", roles: "" });
-    setIsModalOpen(true);
+    setModuleFormData({ name: "", description: "", roles: "" });
+    setIsModuleModalOpen(true);
   };
 
-  const openEditModal = (module: Module) => {
+  const openEditModuleModal = (module: Module) => {
     setEditingModule(module);
-    setFormData({
+    setModuleFormData({
       name: module.name,
       description: module.description,
       roles: module.roles.join(", "),
     });
-    setIsModalOpen(true);
+    setIsModuleModalOpen(true);
   };
 
-  const closeModal = () => {
-    setIsModalOpen(false);
+  const closeModuleModal = () => {
+    setIsModuleModalOpen(false);
     setEditingModule(null);
-    setFormData({ name: "", description: "", roles: "" });
+    setModuleFormData({ name: "", description: "", roles: "" });
   };
 
   const handleSaveModule = () => {
-    const rolesList = formData.roles.split(",").map((r) => r.trim()).filter(Boolean);
+    const rolesList = moduleFormData.roles.split(",").map((r) => r.trim()).filter(Boolean);
     
     const updatedPhases = phases.map((phase) => {
       if (phase.number !== activePhase) return phase;
 
       if (editingModule) {
-        // Edit existing module
         return {
           ...phase,
           modules: phase.modules.map((m) =>
             m.id === editingModule.id
-              ? { ...m, name: formData.name, description: formData.description, roles: rolesList }
+              ? { ...m, name: moduleFormData.name, description: moduleFormData.description, roles: rolesList }
               : m
           ),
         };
       } else {
-        // Create new module
         const newModule: Module = {
           id: Date.now().toString(),
-          name: formData.name || "New Module",
-          description: formData.description || "Module description",
+          name: moduleFormData.name || "New Module",
+          description: moduleFormData.description || "Module description",
           roles: rolesList.length > 0 ? rolesList : ["Unassigned"],
           workflows: [],
         };
@@ -95,23 +95,22 @@ export function ModulesCard({ activePhase, phases, setPhases }: ModulesCardProps
 
     setPhases(updatedPhases);
     
-    // Auto-expand new module
     if (!editingModule) {
       const newId = Date.now().toString();
       setExpandedModules((prev) => new Set(prev).add(newId));
     }
     
-    closeModal();
+    closeModuleModal();
   };
 
   const confirmDelete = (moduleId: string) => {
     setModuleToDelete(moduleId);
     setIsDeleteConfirmOpen(true);
-    closeModal(); // Close the edit modal if it's open
+    closeModuleModal();
   };
 
   const handleDeleteModule = () => {
-    if (moduleToDelete === null) return;
+    if (!moduleToDelete) return;
     
     const updatedPhases = phases.map((phase) => {
       if (phase.number !== activePhase) return phase;
@@ -126,27 +125,18 @@ export function ModulesCard({ activePhase, phases, setPhases }: ModulesCardProps
     setModuleToDelete(null);
   };
 
-  const addWorkflow = (moduleId: string) => {
-    const newWorkflow: Workflow = {
-      id: Date.now().toString(),
-      name: "New Workflow",
-      tags: ["Draft"],
-      ticketCount: 0,
-      progress: 0,
-    };
-
+  const handleUpdateWorkflows = (moduleId: string, workflows: Workflow[]) => {
     const updatedPhases = phases.map((phase) => {
       if (phase.number !== activePhase) return phase;
       return {
         ...phase,
         modules: phase.modules.map((m) =>
           m.id === moduleId
-            ? { ...m, workflows: [...m.workflows, newWorkflow] }
+            ? { ...m, workflows }
             : m
         ),
       };
     });
-
     setPhases(updatedPhases);
   };
 
@@ -160,7 +150,7 @@ export function ModulesCard({ activePhase, phases, setPhases }: ModulesCardProps
           Modules {currentPhase && `(Phase ${activePhase})`}
         </h3>
         <button
-          onClick={openCreateModal}
+          onClick={openCreateModuleModal}
           className="flex items-center gap-1.5 px-3 py-1.5 bg-[#4F46E5] text-white text-sm font-semibold rounded-lg hover:bg-[#4338CA] transition-all shadow-sm"
         >
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -236,7 +226,7 @@ export function ModulesCard({ activePhase, phases, setPhases }: ModulesCardProps
 
                     {/* Edit button */}
                     <button
-                      onClick={() => openEditModal(module)}
+                      onClick={() => openEditModuleModal(module)}
                       className="opacity-60 hover:opacity-100 transition-opacity p-1 hover:bg-[#F1F5F9] rounded"
                     >
                       <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -250,77 +240,11 @@ export function ModulesCard({ activePhase, phases, setPhases }: ModulesCardProps
 
                 {/* Workflows List */}
                 {isExpanded && (
-                  <div className="bg-white">
-                    {module.workflows.map((workflow) => (
-                      <div
-                        key={workflow.id}
-                        className="flex items-center justify-between px-4 py-3 border-b border-[#F1F5F9] hover:bg-[#F8FAFC] transition-colors group"
-                      >
-                        <div className="flex items-center gap-3 flex-1">
-                          <svg width="6" height="6" viewBox="0 0 6 6" fill="none">
-                            <circle cx="3" cy="3" r="2" fill="#94A3B8" />
-                          </svg>
-                          <span className="font-medium text-sm text-[#0F172A]">
-                            {workflow.name}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center gap-4">
-                          {/* Tags */}
-                          <div className="flex gap-1.5">
-                            {workflow.tags.map((tag) => (
-                              <span
-                                key={tag}
-                                className="px-2 py-0.5 bg-[#EFF6FF] text-[#3B82F6] rounded text-[10px] font-semibold"
-                              >
-                                {tag}
-                              </span>
-                            ))}
-                          </div>
-
-                          {/* Ticket Count */}
-                          <div className="flex items-center gap-1.5 min-w-[90px]">
-                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                              <path
-                                d="M6 0L7.5 3.5L11 4L8.5 6.5L9 10L6 8L3 10L3.5 6.5L1 4L4.5 3.5L6 0Z"
-                                fill="#94A3B8"
-                              />
-                            </svg>
-                            <span className="text-xs text-[#64748B]">
-                              {workflow.ticketCount} Tickets
-                            </span>
-                          </div>
-
-                          {/* Progress Bar */}
-                          <div className="flex items-center gap-2 min-w-[140px]">
-                            <div className="w-20 h-1.5 bg-[#E2E8F0] rounded-full overflow-hidden">
-                              <div
-                                className="h-full bg-[#4F46E5] rounded-full transition-all"
-                                style={{ width: `${workflow.progress}%` }}
-                              />
-                            </div>
-                            <span className="text-[11px] font-semibold text-[#475569]">
-                              {workflow.progress}%
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-
-                    {/* Add Workflow Button */}
-                    <button
-                      onClick={() => addWorkflow(module.id)}
-                      className="w-full m-3 py-2 border-2 border-dashed border-[#CBD5E1] rounded-lg flex items-center justify-center gap-2 hover:bg-[#F8FAFC] hover:border-[#4F46E5] transition-all"
-                      style={{ width: "calc(100% - 24px)" }}
-                    >
-                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                        <path d="M6 1V11M1 6H11" stroke="#94A3B8" strokeWidth="1.5" strokeLinecap="round" />
-                      </svg>
-                      <span className="text-sm font-medium text-[#64748B]">
-                        Add Workflow
-                      </span>
-                    </button>
-                  </div>
+                  <WorkflowsList
+                    workflows={module.workflows}
+                    moduleId={module.id}
+                    onUpdateWorkflows={(workflows) => handleUpdateWorkflows(module.id, workflows)}
+                  />
                 )}
               </div>
             );
@@ -328,12 +252,12 @@ export function ModulesCard({ activePhase, phases, setPhases }: ModulesCardProps
         )}
       </div>
 
-      {/* Modal Overlay */}
-      {isModalOpen && (
+      {/* Module Modal */}
+      {isModuleModalOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 relative">
             <button
-              onClick={closeModal}
+              onClick={closeModuleModal}
               className="absolute top-4 right-4 text-[#94A3B8] hover:text-[#475569] transition-colors"
             >
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -357,8 +281,8 @@ export function ModulesCard({ activePhase, phases, setPhases }: ModulesCardProps
                 </label>
                 <input
                   type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  value={moduleFormData.name}
+                  onChange={(e) => setModuleFormData({ ...moduleFormData, name: e.target.value })}
                   placeholder="e.g., Authentication & Identity"
                   className="w-full px-3 py-2 bg-white border border-[#CBD5E1] rounded-lg text-sm text-[#0F172A] focus:outline-none focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5] transition-all"
                 />
@@ -370,8 +294,8 @@ export function ModulesCard({ activePhase, phases, setPhases }: ModulesCardProps
                 </label>
                 <input
                   type="text"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  value={moduleFormData.description}
+                  onChange={(e) => setModuleFormData({ ...moduleFormData, description: e.target.value })}
                   placeholder="e.g., SSO, JWT, User Roles"
                   className="w-full px-3 py-2 bg-white border border-[#CBD5E1] rounded-lg text-sm text-[#0F172A] focus:outline-none focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5] transition-all"
                 />
@@ -383,8 +307,8 @@ export function ModulesCard({ activePhase, phases, setPhases }: ModulesCardProps
                 </label>
                 <input
                   type="text"
-                  value={formData.roles}
-                  onChange={(e) => setFormData({ ...formData, roles: e.target.value })}
+                  value={moduleFormData.roles}
+                  onChange={(e) => setModuleFormData({ ...moduleFormData, roles: e.target.value })}
                   placeholder="e.g., Frontend, Backend, DevOps"
                   className="w-full px-3 py-2 bg-white border border-[#CBD5E1] rounded-lg text-sm text-[#0F172A] focus:outline-none focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5] transition-all"
                 />
@@ -395,7 +319,6 @@ export function ModulesCard({ activePhase, phases, setPhases }: ModulesCardProps
             </div>
 
             <div className="flex justify-between items-center mt-6 pt-4 border-t border-[#F1F5F9]">
-              {/* Delete button - only show when editing */}
               {editingModule && (
                 <button
                   onClick={() => confirmDelete(editingModule.id)}
@@ -410,7 +333,7 @@ export function ModulesCard({ activePhase, phases, setPhases }: ModulesCardProps
               
               <div className="flex gap-3 ml-auto">
                 <button
-                  onClick={closeModal}
+                  onClick={closeModuleModal}
                   className="px-4 py-2 text-sm font-semibold text-[#64748B] hover:text-[#0F172A] transition-colors"
                 >
                   Cancel
