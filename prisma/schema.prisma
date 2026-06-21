@@ -871,6 +871,7 @@ model Users {
   client_id                          String?           @db.Uuid
   department_id                      String?           @db.Uuid
   email                              String            @unique
+  phone                              String?           @unique
   Comments                           Comments[]
   RoleAssignments                    RoleAssignments[]
   TicketAssigned                     TicketAssigned[]
