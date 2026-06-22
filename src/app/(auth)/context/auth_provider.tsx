@@ -31,9 +31,11 @@ export function AuthProvider({children}: prop)
                 const new_user : UserType = {
                     client_id: data.client_id,
                     department_id: data.department_id,
+                    phone: data.phone,
                     email: data.email,
                     image_id: data.image_id,
-                    name: data.name,
+                    first_name: data.first_name,
+                    last_name: data.last_name,
                     user_id: data.user_id,
                 }
                 

@@ -229,9 +229,9 @@ export default function EditTicketModal({ ticket: initialTicket, isOpen, onClose
                   {ticket.TicketAssigned.map((a) => (
                     <div key={a.user_id} className="flex items-center gap-2 group">
                       <div className="w-7 h-7 rounded-full bg-indigo-500 flex items-center justify-center text-[10px] font-bold text-white shrink-0">
-                        {a.Users.name.split(' ').map((n: string) => n[0]).join('')}
+                        {(`${a.Users.first_name} ${a.Users.last_name}`).split(' ').map((n: string) => n[0]).join('')}
                       </div>
-                      <span className="text-sm text-gray-700 font-medium flex-1">{a.Users.name}</span>
+                      <span className="text-sm text-gray-700 font-medium flex-1">{`${a.Users.first_name} ${a.Users.last_name}`}</span>
                       <button
                         onClick={() => setTicket(t => t ? {
                           ...t,
@@ -281,9 +281,9 @@ export default function EditTicketModal({ ticket: initialTicket, isOpen, onClose
                           className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 transition-colors"
                         >
                           <div className="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center text-[10px] font-bold text-white shrink-0">
-                            {user.name.split(' ').map((n: string) => n[0]).join('')}
+                            {(`${user.first_name} ${user.last_name}`).split(' ').map((n: string) => n[0]).join('')}
                           </div>
-                          <span className="text-sm text-gray-700">{user.name}</span>
+                          <span className="text-sm text-gray-700">{(`${user.first_name} ${user.last_name}`)}</span>
                         </button>
                       ))}
                     </div>
@@ -299,9 +299,9 @@ export default function EditTicketModal({ ticket: initialTicket, isOpen, onClose
                 {watcher ? (
                   <div className="flex items-center gap-2">
                     <div className="w-7 h-7 rounded-full bg-emerald-500 flex items-center justify-center text-[10px] font-bold text-white">
-                      {watcher.name.split(' ').map((n: string) => n[0]).join('')}
+                      {(`${watcher.first_name} ${watcher.last_name}`).split(' ').map((n: string) => n[0]).join('')}
                     </div>
-                    <span className="text-sm text-gray-700 font-medium">{watcher.name}</span>
+                    <span className="text-sm text-gray-700 font-medium">{(`${watcher.first_name} ${watcher.last_name}`)}</span>
                   </div>
                 ) : (
                   <span className="text-sm text-gray-400">—</span>
@@ -321,7 +321,7 @@ export default function EditTicketModal({ ticket: initialTicket, isOpen, onClose
                       onClick={() => { setWatcher(u.user_id); setEditing(null); }}
                       className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
                     >
-                      {u.name}
+                      {(`${u.first_name} ${u.last_name}`)}
                     </button>
                   ))}
                 </div>
