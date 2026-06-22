@@ -34,7 +34,8 @@ export function AuthProvider({children}: prop)
                     phone: data.phone,
                     email: data.email,
                     image_id: data.image_id,
-                    name: data.name,
+                    first_name: data.first_name,
+                    last_name: data.last_name,
                     user_id: data.user_id,
                 }
                 
