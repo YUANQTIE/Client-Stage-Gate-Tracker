@@ -51,7 +51,7 @@ export async function ticketUpdate(
   ticketId: string,
   data: Prisma.TicketsUncheckedUpdateInput,
   tagIds?: string[],
-  assignedIds?: string[]   // ← add param
+  assignedIds?: string[]
 ): Promise<Ticket> {
   if (tagIds !== undefined) {
     await prisma.ticketTags.deleteMany({ where: { ticket_id: ticketId } });

@@ -48,8 +48,11 @@ export default function LoginPage() {
       setError(error_message)
       return
     }
-    //CHANGE INITIAL PAGE HERE
-    router.push('/projects/demo/workflows/sprint-1/tickets')
+		
+		if (user?.client_id)
+    	router.push('/client/'+user?.client_id)
+    else (user?.department_id)
+			router.push('/department_id/'+user?.department_id)
     
   }
 
