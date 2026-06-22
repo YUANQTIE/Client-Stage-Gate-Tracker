@@ -1,8 +1,11 @@
+"use client";
+
 import ContractViewer from "@/components/ui/ContractDesign/ContractViewer";
 import SignatoriesCard, {
   type Signatory,
 } from "@/components/ui/ContractDesign/SignatoriesCard";
-//import ExecuteAgreementCard from "@/components/ui/ContractDesign/ExecuteAgreementCard";
+import ExecuteAgreementCard from "@/components/ui/ContractDesign/ExecuteAgreementCard";
+import { ExecutedBanner } from "@/components/ui/ContractDesign/ExecutedBanner";
 
 const signatories: Signatory[] = [
   {
@@ -12,7 +15,7 @@ const signatories: Signatory[] = [
     status: "signed",
     timestamp: "Oct 24, 2023, 5:07 PM",
     device: "IPhone 16",
-    location: "Ugong, Valenzuela City"
+    location: "Ugong, Valenzuela City",
   },
   {
     id: "2",
@@ -22,6 +25,8 @@ const signatories: Signatory[] = [
   },
 ];
 
+const allSigned = signatories.every((s) => s.status === "signed");
+
 export default function ContractPage({
   params,
 }: {
@@ -30,6 +35,13 @@ export default function ContractPage({
   return (
     <div className="min-h-screen bg-[#F6F5FB] px-4 py-6 sm:px-8 sm:py-10">
       <div className="mx-auto max-w-6xl">
+        {allSigned && (
+          <ExecutedBanner
+            executedAt="2023-10-24"
+            className="mb-6"
+          />
+        )}
+
         <header className="mb-6">
           <h1 className="text-xl font-semibold text-[#181724]">
             CONTRACT NAME HERE
@@ -44,6 +56,7 @@ export default function ContractPage({
 
           <div className="flex flex-col gap-6">
             <SignatoriesCard signatories={signatories} />
+            <ExecuteAgreementCard maskedEmail="a***@client.com" />
           </div>
         </div>
       </div>
