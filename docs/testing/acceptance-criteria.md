@@ -1,5 +1,3 @@
-
-
 ### BASELINE REQUIREMENTS
 
 | # | Description | Pre-Condition | Post-Condition | Estimate | Prio |
