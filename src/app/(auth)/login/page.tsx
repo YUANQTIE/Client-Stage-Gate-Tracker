@@ -8,8 +8,10 @@ import { Hanken_Grotesk } from 'next/font/google'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
+import { PasswordInput } from '@/components/auth/PasswordInput'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '../context/auth_provider'
+import { AuthError } from '@supabase/supabase-js'
 
 const hanken = Hanken_Grotesk({
   subsets: ['latin'],
@@ -17,7 +19,6 @@ const hanken = Hanken_Grotesk({
 })
 
 export default function LoginPage() {
-  const [showPassword, setShowPassword] = useState(false)
   const router = useRouter()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -31,27 +32,32 @@ export default function LoginPage() {
     setError(null)
     const {error} = await supabase.auth.signInWithPassword({email, password})
     
-    let error_message = null
-
-    if (email == "" && password == "")
-      error_message = "Email and Password are missing"
-    else if (email == "")
-      error_message = "Email is missing"
-    else if (password == "")
-      error_message = "Password is missing"
-    else if (error)
-      error_message = error.message
+    let error_message = handleError(error)
     
     if(error_message)
     {
       setError(error_message)
       return
     }
-    //CHANGE INITIAL PAGE HERE
-    router.push('/projects/demo/workflows/sprint-1/tickets')
+		
+		if (user?.client_id)
+    	router.push('/client/'+user?.client_id)
+    else (user?.department_id)
+			router.push('/department_id/'+user?.department_id)
     
+  }
 
-    
+  function handleError(error: AuthError | null){
+    if (email == "" && password == "")
+      return "Email and Password are missing"
+    else if (email == "")
+      return "Email is missing"
+    else if (password == "")
+      return "Password is missing"
+    else if (error)
+      return error.message
+    else
+      return null
   }
 
   return (
@@ -109,33 +115,11 @@ export default function LoginPage() {
                     Forgot password?
                   </Link>
                 </div>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    defaultValue=""
-                    placeholder="Input password here.."
-                    className="pr-11"
-                    onChange={e => {setPassword(e.target.value)}}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(v => !v)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  >
-                    {showPassword ? (
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 4.411m0 0L21 21" />
-                      </svg>
-                    ) : (
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                      </svg>
-                    )}
-                  </button>
-                </div>
+                <PasswordInput
+                  id="password"
+                  placeholder="Enter your password"
+                  onChange={e => setPassword(e.target.value)}
+                />
               </div>
 
               {error && (
@@ -163,7 +147,7 @@ export default function LoginPage() {
             </div>
 
             <p className="text-center">
-              <Link href="#" className="text-sm text-indigo-600 hover:text-indigo-500 transition-colors">
+              <Link href="/signup" className="text-sm text-indigo-600 hover:text-indigo-500 transition-colors">
                 Sign up for an account
               </Link>
             </p>

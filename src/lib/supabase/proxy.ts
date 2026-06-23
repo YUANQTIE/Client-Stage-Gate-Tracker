@@ -8,7 +8,7 @@ export async function updateSession(request: NextRequest) {
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
         getAll() {
@@ -36,7 +36,17 @@ export async function updateSession(request: NextRequest) {
 
   // IMPORTANT: If you remove getClaims() and you use server-side rendering
   // with the Supabase client, your users may be randomly logged out.
-  await supabase.auth.getClaims()
+  const user = await (await supabase.auth.getClaims())?.data?.claims
+
+  //should list all protected routes here
+  const protectedRoutes = ['/projects', '/dashboard']
+
+  const path = request.nextUrl.pathname
+  const isProtectedRoute = protectedRoutes.some(route => path.startsWith(route))
+  
+  if(isProtectedRoute && !user){
+    return NextResponse.redirect(new URL('/login', request.url))
+  }
 
   return supabaseResponse
 }

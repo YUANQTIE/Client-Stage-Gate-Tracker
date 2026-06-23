@@ -24,3 +24,14 @@ export type ContractStatus =
   | "PENDING_SIGNATURE"
   | "SIGNED"
   | "REJECTED";
+
+export interface UserType {
+  user_id: string,
+  first_name: string,
+  last_name: string,
+  phone: string,
+  image_id: string,
+  client_id: string, 
+  department_id: string,
+  email: string
+}

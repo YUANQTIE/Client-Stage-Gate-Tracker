@@ -26,7 +26,7 @@ export type Ticket = Prisma.TicketsGetPayload<{
  * Returns a promise that resolves to an array of all available tag objects.
  */
 export async function tagSelect() {
-  return prisma.tags.findMany();
+  return await prisma.tags.findMany();
 }
 
 // ── Tickets ───────────────────────────────────────────────────────────────────
@@ -39,7 +39,7 @@ export async function tagSelect() {
  * Returns a promise that resolves to an array of fully populated Ticket objects.
  */
 export async function ticketSelect(): Promise<Ticket[]> {
-  return prisma.tickets.findMany({ include: ticketInclude });
+  return await prisma.tickets.findMany({ include: ticketInclude });
 }
 
 /**
@@ -57,7 +57,7 @@ export async function ticketCreate(
     tagIds: string[] = [],
     assignedIds: string[] = []
 ): Promise<Ticket> {
-  return prisma.tickets.create({
+  return await prisma.tickets.create({
     data: {
       ...data,
       TicketTags: {
@@ -126,7 +126,7 @@ export async function ticketUpdateStatus(
     ticketId: string,
     status: Ticket['status']
 ): Promise<Ticket> {
-  return prisma.tickets.update({
+  return await prisma.tickets.update({
     where: { ticket_id: ticketId },
     data: { status },
     include: ticketInclude,
