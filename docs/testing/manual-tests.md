@@ -1,4 +1,4 @@
-# CSSWENG Test Cases
+# Manual Testing
 
 ## Test ID: 01-ClientLogin
 * **Designed by:** PUT TEXT
