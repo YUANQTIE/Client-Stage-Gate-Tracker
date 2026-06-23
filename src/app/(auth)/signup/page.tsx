@@ -1,212 +1,83 @@
-'use client'
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
-import { UserType } from '@/types'
+import Image from 'next/image'
+import Link from 'next/link'
+import { Hanken_Grotesk } from 'next/font/google'
+import { SignupForm } from '@/components/auth/SignupForm'
 
-export default function SignUpPage() {
-  const router = useRouter()
-  const supabase = createClient()
-  const MEMBER_TYPES = ['Finance', 'Project Team', 'Product Owner']
+const hanken = Hanken_Grotesk({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+})
 
-  const [form, setForm] = useState({
-    email: '',
-    password: '',
-    firstName: '',
-    lastName: '',
-    phoneNumber: '',
-    jobTitle: '',
-    department: '',
-  })
-  const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target
-
-    // phone number: only allow digits
-    if (name === 'phoneNumber' && !/^\d*$/.test(value)) return
-
-    setForm(prev => ({ ...prev, [name]: value }))
-  }
-
-  async function userSignUp(user: UserType, password: string){
-    const supabase = createClient();
-
-    return await supabase.auth.signUp({
-        email: user.email,
-        password: password,
-        phone: user.phone,
-        options:
-        {
-          data:
-          {
-            first_name: user.first_name ,
-            last_name: user.last_name ,
-            department_id: user.department_id,
-            phone: user.phone,
-          },
-          emailRedirectTo: 'https//localhost:3000/login',
-        }
-      });
-  }
-
-  const handleSignUp = async () => {
-    setError(null)
-
-    // basic validation
-    if (!form.email || !form.password || !form.firstName || !form.lastName) {
-      setError('Email, password, first name, and last name are required.')
-      return
-    }
-    if (!form.department) {
-      setError('Please select a department.')
-      return
-    }
-
-    setLoading(true)
-
-    const user : UserType = {
-        user_id: '',
-        first_name: form.firstName,
-        last_name: form.lastName,
-        phone: form.phoneNumber,
-        image_id: '',
-        client_id: '', 
-        department_id: form.department,
-        email: form.email
-    };
-
-    const { data, error: signUpError } = await userSignUp(user, form.password);
-
-    if (signUpError) {
-      setError(signUpError.message)
-      setLoading(false)
-      return
-    }
-
-    if (data.session) {
-      router.push('/login')
-      router.refresh()
-    } else {
-      setError('Account created! Check your email to confirm your account before logging in.')
-      setLoading(false)
-    }
-  }
-
+export default function SignupPage() {
   return (
-    <div style={styles.page}>
-      <div style={styles.card}>
-        <h1 style={styles.title}>Create an Account</h1>
+    <div className={`${hanken.className} flex min-h-screen w-full`}>
 
-        <div style={styles.row}>
-          <div style={styles.field}>
-            <label style={styles.label}>First Name *</label>
-            <input
-              style={styles.input}
-              name="firstName"
-              type="text"
-              placeholder="John"
-              value={form.firstName}
-              onChange={handleChange}
-            />
-          </div>
-          <div style={styles.field}>
-            <label style={styles.label}>Last Name *</label>
-            <input
-              style={styles.input}
-              name="lastName"
-              type="text"
-              placeholder="Doe"
-              value={form.lastName}
-              onChange={handleChange}
-            />
-          </div>
-        </div>
+      {/* ── Left Panel ── */}
+      <div className="flex flex-col w-full lg:w-[58%] bg-[#F8F9FB] px-10 py-10">
 
-        <div style={styles.field}>
-          <label style={styles.label}>Email *</label>
-          <input
-            style={styles.input}
-            name="email"
-            type="email"
-            placeholder="john@example.com"
-            value={form.email}
-            onChange={handleChange}
+        {/* Brand mark */}
+        <div>
+          <Image
+            src="/assets/logo/asceoft-logo-black.svg"
+            alt="Asceoft"
+            width={91}
+            height={18}
+            unoptimized
           />
-        </div>
-
-        <div style={styles.field}>
-          <label style={styles.label}>Password *</label>
-          <input
-            style={styles.input}
-            name="password"
-            type="password"
-            placeholder="••••••••"
-            value={form.password}
-            onChange={handleChange}
-          />
-        </div>
-
-        <div style={styles.field}>
-          <label style={styles.label}>Phone Number</label>
-          <input
-            style={styles.input}
-            name="phoneNumber"
-            type="text"
-            inputMode="numeric"
-            placeholder="09123456789"
-            value={form.phoneNumber}
-            onChange={handleChange}
-          />
-        </div>
-
-        <div style={styles.field}>
-          <label style={styles.label}>Job Title</label>
-          <input
-            style={styles.input}
-            name="jobTitle"
-            type="text"
-            placeholder="Software Engineer"
-            value={form.jobTitle}
-            onChange={handleChange}
-          />
-        </div>
-
-        <div style={styles.field}>
-          <label style={styles.label}>Member Type *</label>
-          <select
-            style={styles.input}
-            name="department"
-            value={form.department}
-            onChange={handleChange}
-          >
-            <option value="">Select a type...</option>
-            {MEMBER_TYPES.map(type => (
-              <option key={type} value={type}>{type}</option>
-            ))}
-          </select>
-        </div>
-
-        {error && (
-          <p style={error.startsWith('Account created') ? styles.success : styles.error}>
-            {error}
+          <p className="text-[9px] font-semibold tracking-[0.18em] text-gray-400 uppercase mt-1.5">
+            Studio Portal
           </p>
-        )}
+        </div>
 
-        <button
-          style={{ ...styles.button, opacity: loading ? 0.6 : 1 }}
-          onClick={handleSignUp}
-          disabled={loading}
-        >
-          {loading ? 'Creating account...' : 'Sign Up'}
-        </button>
+        {/* Form — vertically centred */}
+        <div className="flex flex-col justify-center flex-1">
+          <div className="w-full max-w-[340px] mx-auto">
 
-        <p style={styles.footer}>
-          Already have an account?{' '}
-          <a href="/login" style={styles.link}>Log in</a>
-        </p>
+            <div className="mb-7">
+              <h1 className="text-[22px] font-semibold text-gray-900 leading-snug">
+                Create your account
+              </h1>
+              <p className="text-sm text-gray-400 mt-1">
+                Start managing your projects and clients with precision.
+              </p>
+            </div>
+
+            <SignupForm />
+
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="text-center mt-6">
+          <p className="text-[11px] text-gray-400 leading-relaxed">
+            By signing up, you agree to our{' '}
+            <Link href="#" className="underline hover:text-gray-500 transition-colors">
+              Terms of Service
+            </Link>{' '}
+            and{' '}
+            <Link href="#" className="underline hover:text-gray-500 transition-colors">
+              Privacy Policy
+            </Link>
+          </p>
+        </div>
       </div>
+
+      {/* ── Right Panel ── */}
+      <div className="hidden lg:flex flex-col items-center justify-center flex-1 relative overflow-hidden bg-[#060D1C]">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_#0f2044_0%,_#060D1C_70%)]" />
+        <div className="relative z-10 flex flex-col items-center">
+          <Image
+            src="/assets/logo/asceoft-logo-white.svg"
+            alt="Asceoft"
+            width={162}
+            height={32}
+            unoptimized
+          />
+          <p className="text-gray-500 text-xs mt-3">[transclucent graphic placeholder]</p>
+          <div className="mt-3 w-8 h-[2px] bg-indigo-500 rounded-full" />
+        </div>
+      </div>
+
     </div>
   )
 }
