@@ -19,13 +19,13 @@ export type Ticket = Prisma.TicketsGetPayload<{
 // ── Tags ──────────────────────────────────────────────────────────────────────
 
 export async function tagSelect() {
-  return prisma.tags.findMany();
+  return await prisma.tags.findMany();
 }
 
 // ── Tickets ───────────────────────────────────────────────────────────────────
 
 export async function ticketSelect(): Promise<Ticket[]> {
-  return prisma.tickets.findMany({ include: ticketInclude });
+  return await prisma.tickets.findMany({ include: ticketInclude });
 }
 
 export async function ticketCreate(
@@ -33,7 +33,7 @@ export async function ticketCreate(
   tagIds: string[] = [],
 	assignedIds: string[] = []
 ): Promise<Ticket> {
-  return prisma.tickets.create({
+  return await prisma.tickets.create({
     data: {
       ...data,
       TicketTags: {
@@ -51,7 +51,7 @@ export async function ticketUpdate(
   ticketId: string,
   data: Prisma.TicketsUncheckedUpdateInput,
   tagIds?: string[],
-  assignedIds?: string[]   // ← add param
+  assignedIds?: string[]
 ): Promise<Ticket> {
   if (tagIds !== undefined) {
     await prisma.ticketTags.deleteMany({ where: { ticket_id: ticketId } });
@@ -83,7 +83,7 @@ export async function ticketUpdateStatus(
   ticketId: string,
   status: Ticket['status']
 ): Promise<Ticket> {
-  return prisma.tickets.update({
+  return await prisma.tickets.update({
     where: { ticket_id: ticketId },
     data: { status },
     include: ticketInclude,

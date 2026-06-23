@@ -277,9 +277,9 @@ export function TicketCardContent({ ticket, onSelect, onEdit, onDelete }: CardCo
         {ticket.Users_Tickets_watcher_idToUsers ? (
           <div
             className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold text-white bg-gray-600 shrink-0 {usercolor}`}
-            title={ticket.Users_Tickets_watcher_idToUsers?.name}
+            title={`${ticket.Users_Tickets_watcher_idToUsers?.first_name} ${ticket.Users_Tickets_watcher_idToUsers?.last_name}`}
           >
-            {getInitials(ticket.Users_Tickets_watcher_idToUsers?.name)}
+            {getInitials(`${ticket.Users_Tickets_watcher_idToUsers?.first_name} ${ticket.Users_Tickets_watcher_idToUsers?.last_name}`)}
           </div>
         ) : (
           <div className="w-6 h-6 rounded-full border-2 border-dashed border-gray-200" />

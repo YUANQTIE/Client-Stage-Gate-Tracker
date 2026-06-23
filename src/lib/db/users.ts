@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
 
 export async function getUserById(id: string) {
-  return prisma.user.findUnique({ where: { id } });
+  return prisma.users.findUnique({ where: { id } });
 }

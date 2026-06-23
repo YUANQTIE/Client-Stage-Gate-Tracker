@@ -81,3 +81,86 @@ export default function SignupPage() {
     </div>
   )
 }
+
+const styles: Record<string, React.CSSProperties> = {
+  page: {
+    minHeight: '100vh',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f5f5f5',
+    padding: '24px',
+  },
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: '8px',
+    padding: '32px',
+    width: '100%',
+    maxWidth: '480px',
+    boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '16px',
+  },
+  title: {
+    fontSize: '22px',
+    fontWeight: 600,
+    margin: 0,
+  },
+  row: {
+    display: 'flex',
+    gap: '12px',
+  },
+  field: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '4px',
+    flex: 1,
+  },
+  label: {
+    fontSize: '13px',
+    fontWeight: 500,
+    color: '#333',
+  },
+  input: {
+    padding: '8px 12px',
+    fontSize: '14px',
+    color: '#000',
+    border: '1px solid #ddd',
+    borderRadius: '6px',
+    outline: 'none',
+    width: '100%',
+    boxSizing: 'border-box',
+  },
+  button: {
+    padding: '10px',
+    fontSize: '14px',
+    fontWeight: 600,
+    backgroundColor: '#000',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    marginTop: '4px',
+  },
+  error: {
+    fontSize: '13px',
+    color: '#c0392b',
+    margin: 0,
+  },
+  success: {
+    fontSize: '13px',
+    color: '#27ae60',
+    margin: 0,
+  },
+  footer: {
+    fontSize: '13px',
+    textAlign: 'center',
+    color: '#555',
+    margin: 0,
+  },
+  link: {
+    color: '#000',
+    fontWeight: 500,
+  },
+}
