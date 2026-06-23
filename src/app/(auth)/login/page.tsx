@@ -32,16 +32,7 @@ export default function LoginPage() {
     setError(null)
     const {error} = await supabase.auth.signInWithPassword({email, password})
     
-    let error_message = null
-
-    if (email == "" && password == "")
-      error_message = "Email and Password are missing"
-    else if (email == "")
-      error_message = "Email is missing"
-    else if (password == "")
-      error_message = "Password is missing"
-    else if (error)
-      error_message = error.message
+    let error_message = handleError(error)
     
     if(error_message)
     {
@@ -53,26 +44,6 @@ export default function LoginPage() {
     	router.push('/client/'+user?.client_id)
     else (user?.department_id)
 			router.push('/department_id/'+user?.department_id)
-    
-  }
-
-  const handleSignUp = async (e: React.SubmitEvent) => {
-    e.preventDefault()
-    setError(null)
-    const {error} = await supabase.auth.signUp({
-      email: email,
-      password: password,
-    })
-    
-    let error_message = handleError(error)
-    
-    if(error_message)
-    {
-      setError(error_message)
-      return
-    }
-    //CHANGE INITIAL PAGE HERE
-    router.push('/projects/demo/workflows/sprint-1/tickets')
     
   }
 
