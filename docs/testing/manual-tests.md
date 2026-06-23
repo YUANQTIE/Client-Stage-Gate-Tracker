@@ -1,4 +1,4 @@
-# Manual Testing
+# Manual Test Log
 
 **User Login Verification (Test ID: 02-AsceoftLogin)**
 
