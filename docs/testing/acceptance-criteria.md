@@ -1,4 +1,4 @@
-*Assume that fields are required unless specified otherwise
+
 
 ### BASELINE REQUIREMENTS
 
