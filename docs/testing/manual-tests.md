@@ -1,4 +1,4 @@
-# CSSWENG Masterfile Test Cases
+# CSSWENG Test Cases
 
 ## Test ID: 01-ClientLogin
 * **Designed by:** PUT TEXT
