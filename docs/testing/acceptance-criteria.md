@@ -1,3 +1,4 @@
+# [SL] Sign-up / Login
 ### BASELINE REQUIREMENTS
 
 | # | Description | Pre-Condition | Post-Condition | Estimate | Prio |
@@ -115,3 +116,75 @@ The user is successfully logged out of the system
 ##### Acceptance Criteria:
 1. Test that the session ended successfully
 2. Test that the protected pages cannot be accessed after logging out
+
+# [CD] Contract Design
+### BASELINE REQUIREMENTS
+
+| # | Description | Pre-Condition | Post-Condition | Estimate | Prio |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **1** | As the Product Owner, I want to upload a contract so that it can be ready to view and assess between me and my client. | - A project has been made with a client already | - A contract is uploaded successfully<br>- A contract is viewable between the Product Owner and the Client | | 1 |
+| **2** | As the Product Owner, I want to be able to download the contract from the website. | - A contract has been uploaded by the Product Owner | - The project's contract is downloaded successfully<br>- Signatures, if any, are included in the downloaded contract | | 1 |
+| **3** | As the Product Owner, I want to be able to remove a contract so that if there are edits from my end, I can just re-upload. | - A contract has been uploaded by the Product Owner | - The contract is removed successfully<br>- All signatures are removed<br>- All comments are removed from the database | | 1 |
+| **4** | As the Product Owner and Client, I want to be able to view all pages of the uploaded contract. | - A contract has been uploaded by the Product Owner | - All pages of the contract are viewable | | 1 |
+| **5** | As the Client, I would like to highlight and comment on specific parts of the contract to let the Asceoft Team know that I have concerns with the contract. | - A contract has been uploaded by the Product Owner | - A comment is created and attached to a specific section of the contract | | 2 |
+| **6** | As the Client, I would want to delete certain comments so that I can recheck if that part of the contract is fine with me. | - A comment has been made by a client<br>- A contract has been uploaded by the Product Owner | - The comment is soft deleted from the database | | 2 |
+
+### POSSIBLE ADDITION/S
+
+| # | Description | Pre-Condition | Post-Condition | Estimate | Prio |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **7** | As the Product Owner or Client, I want to be able to minimize or maximize the contract view in the application. | - A contract has been uploaded by the Product Owner | - The contract view can be resized without affecting the rest of the page layout | | 5 |
+
+---
+
+# [CS] Contract Signing
+#### BASELINE REQUIREMENTS
+
+| # | Description | Pre-Condition | Post-Condition | Estimate | Prio |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **1** | As a Client, I would want to be able to sign on the agreed upon contract by simply inputting my name to formalize that the team has agreed to the contract's terms. | - There is an uploaded contract<br>- Full Name field is typable and required<br>- Initials field is typable and required | - Signature is recorded successfully<br>- Timestamp, location, and device information are displayed | | 1 |
+| **2** | As a Product Owner, I would want to be able to sign on the agreed upon contract by simply inputting my name and initials to formalize that the team has agreed to the contract's terms. | - There is an uploaded contract<br>- Full Name field is typable and required<br>- Initials field is typable and required | - Signature is recorded successfully<br>- Timestamp, location, and device information are displayed | | 1 |
+| **3** | As a Product Owner, I want to guarantee that my decision is final and secure in signing the contract by allowing me to fill in an OTP prompt. | - There is an uploaded contract<br>- Signature has already been supplied | - OTP is validated successfully<br>- Product Owner signature is visible on the contract preview page | | 2 |
+| **4** | As a Client, I want to guarantee that my decision is final and secure in signing the contract by allowing me to fill in an OTP prompt. | - There is an uploaded contract<br>- Signature has already been supplied | - OTP is validated successfully<br>- Client signature is visible on the contract preview page | | 2 |
+
+#### POSSIBLE ADDITION/S
+
+| # | Description | Pre-Condition | Post-Condition | Estimate | Prio |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **5** | As a user, I want to be able to customize the font for my signature. | - There is an uploaded contract<br>- Full Name and Initials have been supplied | - Signature preview is displayed<br>- User can select a signature font | | 10 |
+
+---
+
+# [PD-P] Phases
+#### BASELINE REQUIREMENTS
+
+| # | Description | Pre-Condition | Post-Condition | Estimate | Prio |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **1** | As a Product Owner, I want to be able to create phases that can group modules by entering a phase name, description, and due date. | - Phase Name field is typable<br>- Description field is typable<br>- Due Date uses calendar input<br>- A project exists | - Phase is created successfully<br>- Phase appears under the selected project | | 1 |
+| **2** | As a Product Owner, I want to be able to edit the contents of phases so there could be a better description of what will happen during the phase. | - Phase exists<br>- Phase Name field is typable<br>- Description field is typable<br>- Due Date uses calendar input | - Phase information is updated successfully | | 2 |
+| **3** | As a Product Owner, I want to be able to delete a phase if it is no longer needed. | - User is prompted to confirm deletion by entering the phase title | - Phase is removed<br>- Phase contents remain cached in the database | | 4 |
+| **4** | As a Product Owner, I would want to move the order of phases around. | - There is at least one phase | - Phases can be reordered through drag-and-drop<br>- Phase ordering is updated successfully | | 3 |
+
+---
+
+# [PD-M] Modules
+#### BASELINE REQUIREMENTS
+
+| # | Description | Pre-Condition | Post-Condition | Estimate | Prio |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **1** | As a member of the Product Team, I would want to be able to add a module by simply adding the title, due date, and focuses. | - A phase has been created<br>- Title is typable<br>- Due Date uses calendar input<br>- Focuses field is typable | - Module is added successfully to the phase | | 1 |
+| **2** | As a member of the Product Team, I would want to be able to edit the module I created by inputting a new due date, title, and focuses. | - Module exists under a phase | - Module fields are updated successfully | | 2 |
+| **3** | As a member of the Product Team, I would want to remove the module from the phase it is assigned to. | - Module exists under a phase<br>- User confirms deletion by entering the module title | - Module is removed from the phase<br>- Module details remain stored in the database | | 3 |
+
+---
+
+# [PD-W] Workflows
+#### BASELINE REQUIREMENTS
+
+| # | Description | Estimate | Expected Inputs | Expected Output | Prio |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **1** | As a Product Team member, I want to create workflows under modules with workflow names and possible tags. | | Workflow Name<br>Workflow Tags | Workflow is created and displayed under the module | 1 |
+| **2** | As a Product Team member, I want to add tickets directly to workflows and view ticket summaries. | | Workflow Selection | User is redirected to the ticket Kanban board | 2 |
+| **3** | As a user, I want to define tags for workflows to provide visual and descriptive categorization. | | Tag Name<br>Description<br>Tag Color | Created tags can be selected and associated with workflows | 2 |
+| **4** | As a Product Team member, I want to edit workflows by renaming them and modifying their tags. | | Workflow Name<br>Workflow Tags | Workflow updates successfully | 2 |
+| **5** | As a Product Team member, I want to delete workflows so I may reassess module contents. | | Workflow Name Confirmation | Workflow is soft deleted while data remains in the database | 2 |
