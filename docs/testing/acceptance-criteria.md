@@ -188,3 +188,4 @@ The user is successfully logged out of the system
 | **3** | As a user, I want to define tags for workflows to provide visual and descriptive categorization. | | Tag Name<br>Description<br>Tag Color | Created tags can be selected and associated with workflows | 2 |
 | **4** | As a Product Team member, I want to edit workflows by renaming them and modifying their tags. | | Workflow Name<br>Workflow Tags | Workflow updates successfully | 2 |
 | **5** | As a Product Team member, I want to delete workflows so I may reassess module contents. | | Workflow Name Confirmation | Workflow is soft deleted while data remains in the database | 2 |
+
