@@ -30,8 +30,9 @@ export interface UserType {
   first_name: string,
   last_name: string,
   phone: string,
-  image_id: string,
-  client_id: string, 
-  department_id: string,
+  image_id: string | null,
+  client_id: string | null, 
+  department_id: string | null,
   email: string
+  job_title: string | null,
 }
