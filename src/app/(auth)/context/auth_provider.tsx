@@ -26,8 +26,13 @@ export function AuthProvider({children}: prop)
         async function set_prisma_user(id: string)
         {
             if(id != ""){
-                const {data} = await supabase.from('Users').select().eq('user_id', id).single()
+                const {data, error} = await supabase.from('Users').select().eq('user_id', id).single()
                 
+                if (error || !data) {
+                    setUser(null) 
+                    return        
+                }
+
                 const new_user : UserType = {
                     client_id: data.client_id,
                     department_id: data.department_id,
@@ -37,15 +42,22 @@ export function AuthProvider({children}: prop)
                     first_name: data.first_name,
                     last_name: data.last_name,
                     user_id: data.user_id,
+                    job_title: data.job_title
                 }
                 
                 setUser(new_user)
+                
             }
         }
 
+        
         supabase.auth.getUser().then(({data}) => set_prisma_user(data.user?.id ? data.user?.id : ""))
-        const { data: {subscription}} = supabase.auth.onAuthStateChange((_var, session) => {
-            set_prisma_user(session?.user?.id ? session?.user?.id : "")
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        if (!session?.user?.id) {
+            setUser(null)
+            return
+        }
+        set_prisma_user(session.user.id)
         })
         return () => subscription.unsubscribe()
     }, [])

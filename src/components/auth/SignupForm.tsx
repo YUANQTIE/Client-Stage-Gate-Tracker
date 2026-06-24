@@ -7,9 +7,12 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { PasswordInput } from '@/components/auth/PasswordInput'
+import { UserType } from '@/types'
+import { createClient } from '@/lib/supabase/client'
 
 export function SignupForm() {
-  const router = useRouter()
+  const router = useRouter();
+  const supabase = createClient();
 
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
@@ -22,36 +25,98 @@ export function SignupForm() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
-  const handleSubmit = async (e: React.BaseSyntheticEvent) => {
-    e.preventDefault()
+  async function userSignUp(user: UserType, password: string){
+    return await supabase.auth.signUp({
+        email: user.email,
+        password: password,
+        options:
+        {
+          data:
+          {
+            first_name: user.first_name ,
+            last_name: user.last_name ,
+            job_title: user.job_title,
+            department_id: user.department_id,
+            phone: user.phone,
+          },
+          emailRedirectTo: 'http://localhost:3000/login',
+        }
+      });
+  }
+
+  const handleSignUp = async (e: React.BaseSyntheticEvent) => {
     setError(null)
+    setLoading(false)
+    e.preventDefault()
 
-    // UI-level validation
-    if (!firstName || !lastName || !email || !phone || !jobTitle || !department || !password || !confirmPassword) {
-      setError('All fields are required.')
+    // basic validation
+    const missingFields: string[] = []
+
+    if (!firstName) missingFields.push('first name')
+    if (!lastName) missingFields.push('last name')
+    if (!email) missingFields.push('email')
+    if (!phone) missingFields.push('phone number')
+    if (!department) missingFields.push('department')
+    if (!password) missingFields.push('password')
+    if (!confirmPassword) missingFields.push('confirm password')
+
+    // check password mismatch separately — only if both are filled
+    const passwordMismatch = password && confirmPassword && password !== confirmPassword
+
+    if (missingFields.length >= 3) {
+      setError('Multiple fields are missing.')
       return
     }
-    if (password !== confirmPassword) {
-      setError('Passwords do not match.')
+    else if (missingFields.length === 2) {
+      setError(`Please input your ${missingFields[0]} and ${missingFields[1]}.`)
       return
     }
-
+    else if (missingFields.length === 1) {
+      setError(`Please input your ${missingFields[0]}.`)
+      return
+    }
+    else if (passwordMismatch) {
+      setError('Password and confirmed password do not match.')
+      return
+    }
+     
     setLoading(true)
-    try {
-      // TODO(backend): replace this block with your auth signup call
-      // Fields available: firstName, lastName, email, phone, jobTitle, department, password
-      // e.g. const { error } = await supabase.auth.signUp({ email, password, options: { data: { firstName, lastName, phone, jobTitle, department } } })
-      //      if (error) throw error
+
+    const user : UserType = {
+        user_id: '',
+        first_name: firstName,
+        last_name: lastName,
+        phone: phone,
+        image_id: null,
+        client_id: null, 
+        department_id: department,
+        email: email,
+        job_title: jobTitle.trim().length == 0 ? null : jobTitle
+    };
+
+    const { data, error: signUpError } = await userSignUp(user, password);
+
+    //catch the sign in error
+    if (signUpError) {
+      setError(signUpError.message)
+      setLoading(false)
+      return
+    }
+
+    //only triggers if CONFIRM EMAIL option in Supabase is off (shud be on by default tho)
+    if (data.session) {
       router.push('/login')
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Something went wrong.')
-    } finally {
+      router.refresh()
+    } else {
+      setError('Account created! Check your email to confirm your account before logging in.')
+      console.log(data)
       setLoading(false)
     }
+    
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSignUp} className="space-y-4">
 
       {/* First Name + Last Name */}
       <div className="flex gap-3">
