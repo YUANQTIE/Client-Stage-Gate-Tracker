@@ -138,7 +138,7 @@ The user is successfully logged out of the system
 ---
 
 # [CS] Contract Signing
-#### BASELINE REQUIREMENTS
+### BASELINE REQUIREMENTS
 
 | # | Description | Pre-Condition | Post-Condition | Estimate | Prio |
 | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -147,7 +147,7 @@ The user is successfully logged out of the system
 | **3** | As a Product Owner, I want to guarantee that my decision is final and secure in signing the contract by allowing me to fill in an OTP prompt. | - There is an uploaded contract<br>- Signature has already been supplied | - OTP is validated successfully<br>- Product Owner signature is visible on the contract preview page | | 2 |
 | **4** | As a Client, I want to guarantee that my decision is final and secure in signing the contract by allowing me to fill in an OTP prompt. | - There is an uploaded contract<br>- Signature has already been supplied | - OTP is validated successfully<br>- Client signature is visible on the contract preview page | | 2 |
 
-#### POSSIBLE ADDITION/S
+### POSSIBLE ADDITION/S
 
 | # | Description | Pre-Condition | Post-Condition | Estimate | Prio |
 | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -156,7 +156,7 @@ The user is successfully logged out of the system
 ---
 
 # [PD-P] Phases
-#### BASELINE REQUIREMENTS
+### BASELINE REQUIREMENTS
 
 | # | Description | Pre-Condition | Post-Condition | Estimate | Prio |
 | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -168,7 +168,7 @@ The user is successfully logged out of the system
 ---
 
 # [PD-M] Modules
-#### BASELINE REQUIREMENTS
+### BASELINE REQUIREMENTS
 
 | # | Description | Pre-Condition | Post-Condition | Estimate | Prio |
 | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -179,7 +179,7 @@ The user is successfully logged out of the system
 ---
 
 # [PD-W] Workflows
-#### BASELINE REQUIREMENTS
+### BASELINE REQUIREMENTS
 
 | # | Description | Estimate | Expected Inputs | Expected Output | Prio |
 | :--- | :--- | :--- | :--- | :--- | :--- |
