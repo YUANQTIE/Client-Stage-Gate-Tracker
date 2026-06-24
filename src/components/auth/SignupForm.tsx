@@ -11,8 +11,12 @@ import { PasswordInput } from '@/components/auth/PasswordInput'
 export function SignupForm() {
   const router = useRouter()
 
-  const [fullName, setFullName] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
+  const [phone, setPhone] = useState('')
+  const [jobTitle, setJobTitle] = useState('')
+  const [department, setDepartment] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -23,7 +27,7 @@ export function SignupForm() {
     setError(null)
 
     // UI-level validation
-    if (!fullName || !email || !password || !confirmPassword) {
+    if (!firstName || !lastName || !email || !phone || !jobTitle || !department || !password || !confirmPassword) {
       setError('All fields are required.')
       return
     }
@@ -35,7 +39,8 @@ export function SignupForm() {
     setLoading(true)
     try {
       // TODO(backend): replace this block with your auth signup call
-      // e.g. const { error } = await supabase.auth.signUp({ email, password })
+      // Fields available: firstName, lastName, email, phone, jobTitle, department, password
+      // e.g. const { error } = await supabase.auth.signUp({ email, password, options: { data: { firstName, lastName, phone, jobTitle, department } } })
       //      if (error) throw error
       router.push('/login')
     } catch (err: unknown) {
@@ -48,16 +53,28 @@ export function SignupForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
 
-      {/* Full Name */}
-      <div>
-        <Label htmlFor="fullname" className="mb-1.5">Full Name</Label>
-        <Input
-          id="fullname"
-          type="text"
-          placeholder="Enter your full name"
-          value={fullName}
-          onChange={e => setFullName(e.target.value)}
-        />
+      {/* First Name + Last Name */}
+      <div className="flex gap-3">
+        <div className="flex-1">
+          <Label htmlFor="firstname" className="mb-1.5">First Name</Label>
+          <Input
+            id="firstname"
+            type="text"
+            placeholder="First name"
+            value={firstName}
+            onChange={e => setFirstName(e.target.value)}
+          />
+        </div>
+        <div className="flex-1">
+          <Label htmlFor="lastname" className="mb-1.5">Last Name</Label>
+          <Input
+            id="lastname"
+            type="text"
+            placeholder="Last name"
+            value={lastName}
+            onChange={e => setLastName(e.target.value)}
+          />
+        </div>
       </div>
 
       {/* Work Email */}
@@ -70,6 +87,42 @@ export function SignupForm() {
           value={email}
           onChange={e => setEmail(e.target.value)}
         />
+      </div>
+
+      {/* Phone Number */}
+      <div>
+        <Label htmlFor="phone" className="mb-1.5">Phone Number</Label>
+        <Input
+          id="phone"
+          type="tel"
+          placeholder="+1 (555) 000-0000"
+          value={phone}
+          onChange={e => setPhone(e.target.value)}
+        />
+      </div>
+
+      {/* Job Title + Department */}
+      <div className="flex gap-3">
+        <div className="flex-1">
+          <Label htmlFor="jobtitle" className="mb-1.5">Job Title</Label>
+          <Input
+            id="jobtitle"
+            type="text"
+            placeholder="e.g. Product Manager"
+            value={jobTitle}
+            onChange={e => setJobTitle(e.target.value)}
+          />
+        </div>
+        <div className="flex-1">
+          <Label htmlFor="department" className="mb-1.5">Department</Label>
+          <Input
+            id="department"
+            type="text"
+            placeholder="e.g. Engineering"
+            value={department}
+            onChange={e => setDepartment(e.target.value)}
+          />
+        </div>
       </div>
 
       {/* Password */}
