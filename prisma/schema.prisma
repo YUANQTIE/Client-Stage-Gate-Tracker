@@ -873,6 +873,7 @@ model Users {
   phone                              String            @unique
   first_name                         String
   last_name                          String
+  job_title                          String?
   Comments                           Comments[]
   RoleAssignments                    RoleAssignments[]
   TicketAssigned                     TicketAssigned[]
