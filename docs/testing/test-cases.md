@@ -49,6 +49,9 @@
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **1-1** | Valid User login | In the Login Screen, the tester should:<br>1. Enter "testuser" as the Username <br>2. Enter "mypassword" as the Password <br>3. Click the Login button | Upon completing the steps above, the Profile of the tester should be displayed.<br><br>Verify that the Full Name, Position & Company of the tester is displayed. | The profile of the tester is displayed. The full name, position, and company of the tester are displayed. | Jose Dimagiba / 5/22/26 |
 
+---
+# Test Cases (Stage Gate Project Design)
+
 ## Test ID: 05-ProjectCreate
 * **Designed by:** Jose Dimagiba
 * **Test Data Source:** User data entry
@@ -59,7 +62,7 @@
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **1-1** | Valid User login | In the Login Screen, the tester should:<br>1. Enter "testuser" as the Username <br>2. Enter "mypassword" as the Password <br>3. Click the Login button | Upon completing the steps above, the Profile of the tester should be displayed.<br><br>Verify that the Full Name, Position & Company of the tester is displayed. | The profile of the tester is displayed. The full name, position, and company of the tester are displayed. | Jose Dimagiba / 5/22/26 |
 
---
+---
 
 ## Test ID: 06-ProjectView
 * **Designed by:** Jose Dimagiba
@@ -107,7 +110,7 @@
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **1-1** | Valid User login | In the Login Screen, the tester should:<br>1. Enter "testuser" as the Username <br>2. Enter "mypassword" as the Password <br>3. Click the Login button | Upon completing the steps above, the Profile of the tester should be displayed.<br><br>Verify that the Full Name, Position & Company of the tester is displayed. | The profile of the tester is displayed. The full name, position, and company of the tester are displayed. | Jose Dimagiba / 5/22/26 |
 
---
+---
 
 ## Test ID: 10-PhaseEdit
 * **Designed by:** Isa Lee
