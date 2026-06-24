@@ -88,7 +88,7 @@
 
 * **Expected Behavior:** The phase information should be updated successfully, a success message should be displayed, and the updated phase details should appear in the phase information.
 * **Actual Results Observed:** The phase information was updated successfully, a success message was displayed, and the updated details were reflected in the phase information.
-* **Tester Notes:** None.
+* **Tester Notes:** Everything worked as expected.
 
 ---
 
