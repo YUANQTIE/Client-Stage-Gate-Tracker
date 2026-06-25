@@ -1,8 +1,11 @@
 "use server";
 import { prisma } from "@/lib/prisma";
+import { cascadeSoftDeleteWorkflow } from "./workflowActions";
+
+export type EntityFilterStatus = 'active' | 'deleted' | 'all';
 
 /**
- * Creates a new module and links it to the parent phase in a single transaction.
+ * Creates a new module and maps it to its parent phase.
  *
  * @param {string} phaseId - The UUID of the parent phase this module belongs to.
  * @param {string} moduleName - The display name of the module (e.g., "Module 1", "Authentication").
@@ -11,7 +14,7 @@ import { prisma } from "@/lib/prisma";
  * @param {Date | null} [endDate] - (Optional) The scheduled end date of the module.
  * @returns {Promise<{success: boolean, data?: any, error?: string}>}
  * Returns `success: true` and the newly created module object if successful.
- * Returns `success: false` and an error message if the creation or linking fails.
+ * Returns `success: false` and an error message if the creation fails.
  */
 export async function createModule(
     phaseId: string,
@@ -27,48 +30,47 @@ export async function createModule(
                 description: description,
                 start_date: startDate,
                 end_date: endDate,
-
-                PhaseModules: {
-                    create: {
-                        phase_id: phaseId,
-                    },
-                },
+                phase_id: phaseId,
             },
         });
         return { success: true, data: newModule };
     } catch (error) {
         console.error("Failed to create module:", error);
-        return { success: false, error: "Failed to create module and link to phase." };
+        return { success: false, error: "Failed to create module." };
     }
 }
-
 
 /**
  * Retrieves a specific module from the database using its unique ID.
  * Includes the relational link to its parent phase.
- * Automatically blocks access to modules that have been soft-deleted.
+ * Uses a status filter to determine if the module can be retrieved based on its deletion state:
+ * - 'active' (default): Only retrieves the module if it is NOT soft-deleted.
+ * - 'deleted': Only retrieves the module if it IS soft-deleted (useful for recycle bin views).
+ * - 'all': Retrieves the module regardless of its deletion status.
+ * Security Note: Ensure user authorization claims are verified before execution.
  *
  * @param {string} moduleId - The UUID of the module to retrieve.
+ * @param {EntityFilterStatus} [status='active'] - The deletion status filter.
  * @returns {Promise<{success: boolean, data?: any, error?: string}>}
  * Returns `success: true` and the module object if found.
- * Returns `success: false` and an error message if the module does not exist or the query fails.
+ * Returns `success: false` and an error message if the module does not exist, does not match the requested status, or the query fails.
  */
-export async function getModuleById(moduleId: string) {
+export async function getModuleById(moduleId: string, status: EntityFilterStatus = 'active') {
     try {
-        // SECURITY CHECK GOES HERE LATER:
-        // Example: await prisma.$executeRaw`SELECT set_config('request.jwt.claims', ${currentUser.token}, TRUE)`
+        const isDeletedFilter = status === 'active' ? false : status === 'deleted' ? true : undefined;
 
         const moduleData = await prisma.modules.findUnique({
             where: {
                 module_id: moduleId,
-                // is_deleted: false,
+                // is_deleted: isDeletedFilter,
             },
             include: {
-                PhaseModules: true,
+                Phases: true,
             },
         });
+        
         if (!moduleData) {
-            return { success: false, error: "Module not found in the database." };
+            return { success: false, error: "Module not found or does not match the requested status." };
         }
         return { success: true, data: moduleData };
     } catch (error) {
@@ -77,6 +79,40 @@ export async function getModuleById(moduleId: string) {
     }
 }
 
+/**
+ * Retrieves all workflows belonging to a specific module.
+ * Uses a status filter to determine which workflows to return based on their deletion state:
+ * - 'active' (default): Returns only workflows that are NOT soft-deleted.
+ * - 'deleted': Returns only workflows that ARE soft-deleted (useful for recycle bin views).
+ * - 'all': Bypasses the filter and returns everything.
+ * Workflows are returned in ascending chronological order based on their 'creation_date' field.
+ *
+ * @param {string} moduleId - The UUID of the parent module.
+ * @param {EntityFilterStatus} [status='active'] - The deletion status filter.
+ * @returns {Promise<{success: boolean, data?: any, error?: string}>}
+ * Returns `success: true` and an array of workflows if the query is successful.
+ * Returns `success: false` and an error message if the query fails.
+ */
+export async function getWorkflowsByModuleId(moduleId: string, status: EntityFilterStatus = 'active') {
+    try {
+        const isDeletedFilter = status === 'active' ? false : status === 'deleted' ? true : undefined;
+
+        const workflows = await prisma.workflows.findMany({
+            where: {
+                module_id: moduleId,
+                // is_deleted: isDeletedFilter,
+            },
+            orderBy: {
+                creation_date: 'asc',
+            },
+        });
+
+        return { success: true, data: workflows };
+    } catch (error) {
+        console.error("Failed to fetch workflows for module:", error);
+        return { success: false, error: "Failed to fetch workflows." };
+    }
+}
 
 /**
  * Updates an existing module's details in the database.
@@ -116,7 +152,6 @@ export async function updateModule(
     }
 }
 
-
 /**
  * Performs a "soft delete" on a module by marking it as deleted instead of permanently erasing it.
  * This acts like a recycle bin, preserving historical data and preventing database corruption.
@@ -129,7 +164,7 @@ export async function updateModule(
  */
 export async function softDeleteModule(moduleId: string) {
     try {
-        const attachedWorkflowsCount = await prisma.moduleWorkflows.count({
+        const attachedWorkflowsCount = await prisma.workflows.count({
             where: {
                 module_id: moduleId,
                 // is_deleted: false
@@ -153,5 +188,49 @@ export async function softDeleteModule(moduleId: string) {
     } catch (error) {
         console.error("Failed to soft delete module:", error);
         return { success: false, error: "Failed to archive the module due to a database error." };
+    }
+}
+
+/**
+ * Performs a cascading soft delete on a module and all its nested children.
+ * This function integrates with Prisma interactive transactions by accepting an optional 
+ * txClient. It soft deletes the targeted module, retrieves all dependent workflows, 
+ * and iterates through them to execute the workflow-level cascade function, passing 
+ * the transaction forward to maintain consistency.
+ *
+ * @param {string} moduleId - The UUID of the module to archive.
+ * @param {any} [txClient] - (Optional) The Prisma transaction context to maintain database integrity.
+ * @returns {Promise<{success: boolean, error?: string}>}
+ * Returns `success: true` upon successful cascade.
+ * Returns `success: false` and an error message if the operation fails, or throws an error to trigger a rollback if executed within a parent transaction.
+ */
+export async function cascadeSoftDeleteModule(moduleId: string, txClient?: any) {
+    const executeLogic = async (tx: any) => {
+        await tx.modules.update({
+            where: { module_id: moduleId },
+            data: { /* is_deleted: true, deleted_at: new Date() */ }
+        });
+
+        const childWorkflows = await tx.workflows.findMany({
+            where: { module_id: moduleId, /* is_deleted: false */ },
+            select: { workflow_id: true }
+        });
+
+        for (const workflow of childWorkflows) {
+            await cascadeSoftDeleteWorkflow(workflow.workflow_id, tx);
+        }
+    };
+
+    try {
+        if (txClient) {
+            await executeLogic(txClient);
+        } else {
+            await prisma.$transaction(executeLogic);
+        }
+        return { success: true };
+    } catch (error) {
+        console.error("Failed cascading soft delete for module:", error);
+        if (txClient) throw error;
+        return { success: false, error: "Failed to cascade archive module." };
     }
 }
