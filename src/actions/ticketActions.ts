@@ -2,20 +2,6 @@
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/lib/generated/prisma";
 
-// ── Ticket Type ───────────────────────────────────────────────────────────────
-
-const ticketInclude = {
-  Users_Tickets_assigner_idToUsers: true,
-  Users_Tickets_watcher_idToUsers: true,
-  TicketSubtasks_TicketSubtasks_ticket_idToTickets: true,
-  TicketTags: { include: { Tags: true } },
-  TicketAssigned: { include: { Users: true } },
-} satisfies Prisma.TicketsInclude;
-
-export type Ticket = Prisma.TicketsGetPayload<{
-  include: typeof ticketInclude;
-}>;
-
 export type EntityFilterStatus = 'active' | 'deleted' | 'all';
 
 // ── Tags ──────────────────────────────────────────────────────────────────────
@@ -36,12 +22,20 @@ export async function tagSelect() {
 /**
  * Retrieves all ticket records from the database, eagerly loading nested relational data
  * including assigners, watchers, subtasks, tags, and assigned team members.
- *
- * @returns {Promise<Ticket[]>}
- * Returns a promise that resolves to an array of fully populated Ticket objects.
  */
-export async function ticketSelect(): Promise<Ticket[]> {
-  return await prisma.tickets.findMany({ include: ticketInclude });
+export async function ticketSelect() {
+  return await prisma.tickets.findMany({
+    include: {
+			TicketComments: true,
+			TicketHistoryEvents: true,
+			TicketImages: true,
+			TicketSubtasks_TicketSubtasks_subtask_idToTickets: true,
+			TicketSubtasks_TicketSubtasks_ticket_idToTickets: true,
+			Users_Tickets_assigner_idToUsers: true,
+			Users_Tickets_watcher_idToUsers: true,
+			WorkflowsTickets: true
+    }
+  });
 }
 
 /**
@@ -112,7 +106,11 @@ export async function getTicketById(ticketId: string, status: EntityFilterStatus
                 ticket_id: ticketId,
                 // is_deleted: isDeletedFilter,
             },
-            include: ticketInclude,
+            include: {
+                TicketTags: true,
+                TicketAssigned: true,
+                ticketSubtasks: true,
+            },
         });
 
         if (!ticketData) {
@@ -165,60 +163,69 @@ export async function getSubtasksByTicketId(ticketId: string, status: EntityFilt
  * it completely flushes the previous relations and remaps them to maintain clean data records.
  *
  * @param {string} ticketId - The UUID of the specific ticket to modify.
- * @param {Prisma.TicketsUncheckedUpdateInput} data - The updated payload properties for the ticket entity.
+ * @param {Prisma.ticketsUncheckedUpdateInput} data - The updated payload properties for the ticket entity.
  * @param {string[]} [tagIds] - (Optional) A complete replacement array of tag UUIDs. Overwrites existing associations if defined.
  * @param {string[]} [assignedIds] - (Optional) A complete replacement array of assigned user UUIDs. Overwrites existing assignments if defined.
- * @returns {Promise<Ticket>}
- * Returns a promise that resolves to the modified, fully re-hydrated Ticket object.
  */
-export async function ticketUpdate(
+/**
+ * Updates an existing ticket's details in the database.
+ *
+ * @param {string} ticketId - The UUID of the ticket to update.
+ * @param {string} [name] - (Optional) The new name for the ticket.
+ * @param {string | null} [description] - (Optional) The new description for the ticket.
+ * @param {Date | null} [startDate] - (Optional) The new scheduled start date.
+ * @param {Date | null} [endDate] - (Optional) The new scheduled end date.
+ * @param {Date | null} [deadlineDate] - (Optional) The new final deadline.
+ * @returns {Promise<{success: boolean, data?: any, error?: string}>}
+ * Returns `success: true` and the updated ticket object if successful.
+ * Returns `success: false` and an error message if the update fails.
+ */
+export async function updateTicket(
     ticketId: string,
-    data: Prisma.TicketsUncheckedUpdateInput,
-    tagIds?: string[],
-    assignedIds?: string[]
-): Promise<Ticket> {
-  if (tagIds !== undefined) {
-    await prisma.ticketTags.deleteMany({ where: { ticket_id: ticketId } });
-  }
-  if (assignedIds !== undefined) {
-    await prisma.ticketAssigned.deleteMany({ where: { ticket_id: ticketId } });
-  }
-
-  return prisma.tickets.update({
-    where: { ticket_id: ticketId },
-    data: {
-      ...data,
-      ...(tagIds !== undefined && {
-        TicketTags: {
-          create: tagIds.map(tag_id => ({ tag_id })),
-        },
-      }),
-      ...(assignedIds !== undefined && {
-        TicketAssigned: {
-          create: assignedIds.map(user_id => ({ user_id })),
-        },
-      }),
-    },
-    include: ticketInclude,
-  });
+    name?: string,
+    description?: string | null,
+    startDate?: Date | null,
+    endDate?: Date | null,
+    deadlineDate?: Date | null
+) {
+    try {
+        const updatedTicket = await prisma.tickets.update({
+            where: {
+                ticket_id: ticketId,
+            },
+            data: {
+                name: name,
+                description: description,
+                start_date: startDate,
+                end_date: endDate,
+                deadline_date: deadlineDate,
+            },
+        });
+        return { success: true, data: updatedTicket };
+    } catch (error) {
+        console.error("Failed to update ticket:", error);
+        return { success: false, error: "Failed to update ticket details." };
+    }
 }
 
 /**
  * Directly alters the status lifecycle configuration parameter of a singular ticket.
  *
  * @param {string} ticketId - The UUID of the ticket whose status is being changed.
- * @param {Ticket['status']} status - The strict typed string corresponding to the target ticket state.
- * @returns {Promise<Ticket>}
- * Returns a promise that resolves to the updated Ticket object with the new status state applied.
+ * @param {any} status - The status corresponding to the target ticket state.
  */
 export async function ticketUpdateStatus(
     ticketId: string,
-    status: Ticket['status']
-): Promise<Ticket> {
+    status: any
+) {
   return await prisma.tickets.update({
     where: { ticket_id: ticketId },
     data: { status },
-    include: ticketInclude,
+    include: {
+      TicketTags: true,
+      TicketAssigned: true,
+      ticketSubtasks: true,
+    },
   });
 }
 
@@ -311,8 +318,6 @@ export async function cascadeSoftDeleteTicket(ticketId: string, txClient?: Prism
  * prior to removing the root ticket.
  *
  * @param {string} ticketId - The UUID of the ticket being targeted for absolute deletion.
- * @returns {Promise<any>}
- * Returns a promise that resolves to the core unpopulated base record that was deleted.
  */
 export async function ticketDelete(ticketId: string) {
   await prisma.ticketTags.deleteMany({ where: { ticket_id: ticketId } });
@@ -330,7 +335,7 @@ export async function ticketDelete(ticketId: string) {
   await prisma.ticketAssigned.deleteMany({ where: { ticket_id: ticketId } });
   await prisma.workflowsTickets.deleteMany({ where: { ticket_id: ticketId } });
 
-  return prisma.tickets.delete({
+  return await prisma.tickets.delete({
     where: { ticket_id: ticketId },
   });
 }

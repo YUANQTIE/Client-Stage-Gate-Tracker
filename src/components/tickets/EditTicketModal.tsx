@@ -1,7 +1,7 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
 import { Prisma } from "@/lib/generated/prisma";
-import { type Ticket, tagSelect, ticketUpdate } from "@/actions/ticketActions";
+import { type Ticket, tagSelect, updateTicket } from "@/actions/ticketActions";
 import { userSelect } from "@/actions/userActions";
 
 const colorClasses = {

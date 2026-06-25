@@ -20,7 +20,7 @@ import TopNav from "@/components/layout/TopNav";
 import { COLUMNS } from "./types";
 
 import { Prisma } from "@/lib/generated/prisma";
-import { ticketSelect, ticketUpdateStatus, ticketCreate,ticketDelete, type Ticket } from "@/actions/ticketActions";
+import { ticketSelect, ticketUpdateStatus, createTicket,ticketDelete } from "@/actions/ticketActions";
 // ── Icons ─────────────────────────────────────────────────────────────────────
 
 function FilterIcon() {
@@ -111,20 +111,19 @@ export default function TicketBoard({
     setSlideOverOpen(true);
   }
 
-  async function handleCreateTicket(newTicketData: Partial<Ticket>, tagIds: string[] = [],assignedIds: string[] = []) 
+  async function handleCreateTicket(
+		
+	) 
 	{
 		const previousTickets = tickets;
 		try {
-			const newTicket = await ticketCreate(
-				{
-					name: newTicketData.name ?? "New Ticket",
-					description: newTicketData.description ?? null,
-					status: newTicketData.status ?? "PENDING",
-					assigner_id: newTicketData.assigner_id || null,
-					watcher_id: newTicketData.watcher_id ?? null,
-					deadline_date: newTicketData.deadline_date ?? new Date(),
-				},
-				tagIds,assignedIds
+			const newTicket = await createTicket(
+					name ?? "New Ticket",
+					description ?? null,
+					status ?? "PENDING",
+					assigner_id || null,
+					watcher_id ?? null,
+					deadline_date ?? new Date()
 			);
 			setTickets(prev => [...prev, newTicket]);
 		} catch (error) {
