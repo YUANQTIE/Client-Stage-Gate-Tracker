@@ -1,5 +1,6 @@
 "use server";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@/lib/generated/prisma";
 import { cascadeSoftDeleteWorkflow } from "./workflowActions";
 
 export type EntityFilterStatus = 'active' | 'deleted' | 'all';
@@ -206,7 +207,7 @@ export async function softDeleteModule(moduleId: string) {
  * Returns `success: false` and an error message if the operation fails, or throws an error to trigger a rollback if executed within a parent transaction.
  */
 export async function cascadeSoftDeleteModule(moduleId: string, txClient?: any) {
-    const executeLogic = async (tx: any) => {
+    const executeLogic = async (tx: Prisma.TransactionClient) => {
         await tx.modules.update({
             where: { module_id: moduleId },
             data: { /* is_deleted: true, deleted_at: new Date() */ }

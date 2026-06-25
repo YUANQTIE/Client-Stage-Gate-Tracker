@@ -1,5 +1,6 @@
 "use server";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@/lib/generated/prisma";
 // import { cascadeSoftDeleteTicket } from "./ticketActions";
 
 export type EntityFilterStatus = 'active' | 'deleted' | 'all';
@@ -71,7 +72,7 @@ export async function getWorkflowById(workflowId: string, status: EntityFilterSt
                 Modules: true,
             },
         });
-
+        
         if (!workflowData) {
             return { success: false, error: "Workflow not found or does not match the requested status." };
         }
@@ -194,5 +195,49 @@ export async function softDeleteWorkflow(workflowId: string) {
     } catch (error) {
         console.error("Failed to soft delete workflow:", error);
         return { success: false, error: "Failed to archive the workflow due to a database error." };
+    }
+}
+
+/**
+ * Performs a cascading soft delete on a workflow and all its nested tickets.
+ * This function operates inside a provided Prisma transaction (txClient) to ensure 
+ * rollback integrity. It soft deletes the workflow and retrieves all associated tickets. 
+ * A placeholder is currently set in the execution loop to await the creation of 
+ * a future 'cascadeSoftDeleteTicket' action.
+ *
+ * @param {string} workflowId - The UUID of the workflow to archive.
+ * @param {any} [txClient] - (Optional) The Prisma transaction context to maintain database integrity.
+ * @returns {Promise<{success: boolean, error?: string}>}
+ * Returns `success: true` upon successful cascade.
+ * Returns `success: false` and an error message if the operation fails, or throws an error to trigger a rollback if executed within a parent transaction.
+ */
+export async function cascadeSoftDeleteWorkflow(workflowId: string, txClient?: any) {
+    const executeLogic = async (tx: any) => {
+        await tx.workflows.update({
+            where: { workflow_id: workflowId },
+            data: { /* is_deleted: true, deleted_at: new Date() */ }
+        });
+
+        const childTickets = await tx.tickets.findMany({
+            where: { workflow_id: workflowId, /* is_deleted: false */ },
+            select: { ticket_id: true }
+        });
+
+        for (const ticket of childTickets) {
+            // TODO: await cascadeSoftDeleteTicket(ticket.ticket_id, tx);
+        }
+    };
+
+    try {
+        if (txClient) {
+            await executeLogic(txClient);
+        } else {
+            await prisma.$transaction(executeLogic);
+        }
+        return { success: true };
+    } catch (error) {
+        console.error("Failed cascading soft delete for workflow:", error);
+        if (txClient) throw error;
+        return { success: false, error: "Failed to cascade archive workflow." };
     }
 }

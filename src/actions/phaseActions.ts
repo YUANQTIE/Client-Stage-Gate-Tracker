@@ -1,5 +1,6 @@
 "use server";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@/lib/generated/prisma";
 import { cascadeSoftDeleteModule } from "./moduleActions";
 
 export type EntityFilterStatus = 'active' | 'deleted' | 'all';
@@ -206,7 +207,7 @@ export async function softDeletePhase(phaseId: string) {
  * Returns `success: false` and an error message if the operation fails, or throws an error to trigger a rollback if executed within a parent transaction.
  */
 export async function cascadeSoftDeletePhase(phaseId: string, txClient?: any) {
-    const executeLogic = async (tx: any) => {
+    const executeLogic = async (tx: Prisma.TransactionClient) => {
         await tx.phases.update({
             where: { phase_id: phaseId },
             data: { /* is_deleted: true, deleted_at: new Date() */ }
@@ -251,7 +252,7 @@ export async function cascadeSoftDeletePhase(phaseId: string, txClient?: any) {
  */
 export async function swapPhaseOrder(phaseId1: string, phaseId2: string) {
     try {
-        await prisma.$transaction(async (tx) => {
+        await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
             const phase1 = await tx.phases.findUnique({ where: { phase_id: phaseId1 } });
             const phase2 = await tx.phases.findUnique({ where: { phase_id: phaseId2 } });
 
