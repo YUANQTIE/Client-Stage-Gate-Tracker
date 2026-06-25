@@ -10,8 +10,8 @@ import { EntityFilterStatus } from "./ticketActions";
  * @returns {Promise<any[]>}
  * Returns a promise that resolves to an array containing all user objects in the database.
  */
-export async function userSelect() {
-  return await prisma.users.findMany();
+export async function selectProfile() {
+  return prisma.profiles.findMany();
 }
 
 /**
@@ -58,10 +58,10 @@ export async function getUserById(userId: string, status: EntityFilterStatus = '
  * Returns `success: true` and the updated user object if successful.
  * Returns `success: false` and an error message if the update fails.
  */
-export async function userUpdate(user: UserType) {
+export async function updateProfile(user: UserType) {
   try {
-    const updatedUser = await prisma.users.update({
-      where: { id: user.user_id },
+    const updatedUser = await prisma.profiles.update({
+      where: { user_id: user.user_id },
       data: {
         first_name: user.first_name,
         last_name: user.last_name,

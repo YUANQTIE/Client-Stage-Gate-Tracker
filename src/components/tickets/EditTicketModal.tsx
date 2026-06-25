@@ -1,8 +1,22 @@
 'use client';
+
 import { useState, useRef, useEffect } from 'react';
-import { Prisma } from "@/lib/generated/prisma";
-import { type Ticket, tagSelect, updateTicket } from "@/actions/ticketActions";
-import { userSelect } from "@/actions/userActions";
+import { Prisma, status as TicketStatus } from "@/lib/generated/prisma";
+import { Input } from '@/components/ui/input';
+
+import { selectTag } from "@/actions/tagActions";
+import { selectProfile } from "@/actions/profileActions";
+import { ticketUpdateStatus } from "@/actions/ticketActions";
+
+// ── Define the strict Ticket Type using Prisma's payload generator ──────────
+// ── Manual TypeScript definition for your application's unified Ticket interface ──
+type Ticket = Prisma.TicketsGetPayload<{
+  include: {
+    TicketTags: true;
+    TicketAssigned: true;
+    TicketSubtasks_TicketSubtasks_ticket_idToTickets: true;
+  }
+}>;
 
 const colorClasses = {
   indigo: "bg-indigo-50 text-indigo-700",
@@ -15,10 +29,10 @@ const colorClasses = {
   gray:   "bg-gray-50 text-gray-700",
 };
 
-const STATUSES = ['PENDING', 'IN_PROGRESS', 'FINISHED'] as const;
+const STATUSES: TicketStatus[] = ['PENDING', 'IN_PROGRESS', 'FINISHED'];
 
-function statusLabel(status: Ticket['status']) {
-  const map: Record<Ticket['status'], string> = {
+function statusLabel(status: TicketStatus) {
+  const map: Record<TicketStatus, string> = {
     PENDING:     'Pending',
     IN_PROGRESS: 'In Progress',
     FINISHED:    'Finished',
@@ -44,7 +58,7 @@ export default function EditTicketModal({ ticket: initialTicket, isOpen, onClose
   const titleRef = useRef<HTMLInputElement>(null);
   const descRef = useRef<HTMLTextAreaElement>(null);
 
-  const [users, setUsers] = useState<Prisma.UsersGetPayload<{}>[]>([]);
+  const [users, setUsers] = useState<Prisma.ProfilesGetPayload<{}>[]>([]);
   const [availableTags, setAvailableTags] = useState<Prisma.TagsGetPayload<{}>[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
@@ -52,8 +66,8 @@ export default function EditTicketModal({ ticket: initialTicket, isOpen, onClose
   const assignDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    userSelect().then(setUsers);
-    tagSelect().then(setAvailableTags);
+    selectProfile().then((data) => setUsers(data as Prisma.ProfilesGetPayload<{}>[]));
+    selectTag().then((data) => setAvailableTags(data as Prisma.TagsGetPayload<{}>[]));
   }, []);
 
   useEffect(() => {
@@ -79,9 +93,8 @@ export default function EditTicketModal({ ticket: initialTicket, isOpen, onClose
 
   if (!ticket) return null;
 
-  // Computed after null check so ticket is guaranteed non-null
   const availableUsers = users.filter(
-    user => !ticket.TicketAssigned.some(a => a.user_id === user.user_id)
+      user => !ticket.TicketAssigned.some(a => a.profile_id === user.profile_id)
   );
 
   function startEdit(field: EditingField) {
@@ -89,7 +102,7 @@ export default function EditTicketModal({ ticket: initialTicket, isOpen, onClose
     if (field === 'title') setTitleDraft(ticket!.name);
     if (field === 'description') setDescDraft(ticket!.description ?? '');
     if (field === 'deadline') setDeadlineDraft(
-      ticket!.deadline_date ? new Date(ticket!.deadline_date).toISOString().split('T')[0] : ''
+        ticket!.deadline_date ? new Date(ticket!.deadline_date).toISOString().split('T')[0] : ''
     );
   }
 
@@ -111,341 +124,319 @@ export default function EditTicketModal({ ticket: initialTicket, isOpen, onClose
     setEditing(null);
   }
 
-  function setAssignee(userId: string) {
-    if (!userId) return;
-    setTicket(t => t ? { ...t, assigner_id: userId } : t);
-  }
-
   function setWatcher(userId: string) {
     setTicket(t => t ? { ...t, watcher_id: userId || null } : t);
   }
 
-  function setStatus(val: string) {
-    setTicket(t => t ? { ...t, status: val as Ticket['status'] } : t);
+  function setStatus(val: TicketStatus) {
+    setTicket(t => t ? { ...t, status: val } : t);
     setEditing(null);
   }
 
   function toggleTag(tagId: string) {
     setSelectedTags(prev =>
-      prev.includes(tagId) ? prev.filter(t => t !== tagId) : [...prev, tagId]
+        prev.includes(tagId) ? prev.filter(t => t !== tagId) : [...prev, tagId]
     );
   }
 
   async function handleSave() {
     if (!ticket) return;
-    const updated = await ticketUpdate(
-      ticket.ticket_id,
-      {
-        name:          ticket.name,
-        description:   ticket.description,
-        assigner_id:   ticket.assigner_id,
-        watcher_id:    ticket.watcher_id,
-        deadline_date: ticket.deadline_date,
-        status:        ticket.status,
-      },
-      selectedTags,
-      ticket.TicketAssigned.map(a => a.user_id)
-    );
-    onUpdate(updated);
+    // Persist status updates to database through your server action
+    const updated = await ticketUpdateStatus(ticket.ticket_id, ticket.status);
+    onUpdate(updated as unknown as Ticket);
     onClose();
   }
 
-  const assignee       = users.find(u => u.user_id === ticket.assigner_id);
-  const watcher        = users.find(u => u.user_id === ticket.watcher_id);
+  const watcher        = users.find(u => u.profile_id === ticket.watcher_id);
   const isOverdue      = ticket.deadline_date && new Date(ticket.deadline_date) < new Date();
   const deadlineDisplay = ticket.deadline_date
-    ? new Date(ticket.deadline_date).toLocaleDateString()
-    : null;
+      ? new Date(ticket.deadline_date).toLocaleDateString()
+      : null;
 
   return (
-    <>
-      {/* Backdrop */}
-      <div
-        className={`fixed inset-0 bg-black/30 z-40 transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-        onClick={onClose}
-      />
+      <>
+        <div
+            className={`fixed inset-0 bg-black/30 z-40 transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+            onClick={onClose}
+        />
 
-      {/* Panel */}
-      <div className={`fixed top-0 right-0 h-full w-[520px] bg-white shadow-2xl z-50 flex flex-col transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
-
-        {/* Header */}
-        <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 shrink-0">
-          <span className="text-xs font-semibold text-indigo-600 shrink-0">{ticket.ticket_id.slice(0, 8)}</span>
-          {editing === 'title' ? (
-            <input
-              ref={titleRef}
-              value={titleDraft}
-              onChange={e => setTitleDraft(e.target.value)}
-              onBlur={commitTitle}
-              onKeyDown={e => { if (e.key === 'Enter') commitTitle(); if (e.key === 'Escape') setEditing(null); }}
-              className="flex-1 text-sm font-semibold text-gray-900 border border-indigo-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-          ) : (
-            <h2
-              className="text-sm font-semibold text-gray-900 flex-1 truncate cursor-pointer hover:text-indigo-700 transition-colors"
-              onClick={() => startEdit('title')}
-            >
-              {ticket.name}
-            </h2>
-          )}
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded">✕</button>
-        </div>
-
-        {/* Status bar */}
-        <div className="flex items-center gap-3 px-5 py-3.5 border-b border-gray-100 shrink-0 relative">
-          <div className="relative">
-            <button
-              onClick={() => setEditing(editing === 'status' ? null : 'status')}
-              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-3.5 py-2 rounded-lg transition-colors"
-            >
-              {statusLabel(ticket.status)}
-              <span>▾</span>
-            </button>
-            {editing === 'status' && (
-              <div className="absolute z-50 mt-1 min-w-[160px] bg-white border border-gray-200 rounded-lg shadow-lg py-1">
-                {STATUSES.map(s => (
-                  <button
-                    key={s}
-                    onClick={() => setStatus(s)}
-                    className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                  >
-                    {statusLabel(s)}
-                  </button>
-                ))}
-              </div>
+        <div className={`fixed top-0 right-0 h-full w-[520px] bg-white shadow-2xl z-50 flex flex-col transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+          {/* Header */}
+          <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 shrink-0">
+            <span className="text-xs font-semibold text-indigo-600 shrink-0">{ticket.ticket_id.slice(0, 8)}</span>
+            {editing === 'title' ? (
+                <input
+                    ref={titleRef}
+                    value={titleDraft}
+                    onChange={e => setTitleDraft(e.target.value)}
+                    onBlur={commitTitle}
+                    onKeyDown={e => { if (e.key === 'Enter') commitTitle(); if (e.key === 'Escape') setEditing(null); }}
+                    className="flex-1 text-sm font-semibold text-gray-900 border border-indigo-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+            ) : (
+                <h2
+                    className="text-sm font-semibold text-gray-900 flex-1 truncate cursor-pointer hover:text-indigo-700 transition-colors"
+                    onClick={() => startEdit('title')}
+                >
+                  {ticket.name}
+                </h2>
             )}
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded">✕</button>
           </div>
-        </div>
 
-        {/* Scrollable content */}
-        <div className="flex-1 overflow-y-auto">
-          <div className="px-5 py-4 grid grid-cols-2 gap-x-6 gap-y-4 border-b border-gray-100">
-
-            {/* Assigned To */}
-            <div>
-              <p className="text-xs text-gray-400 font-medium mb-1.5">Assigned To</p>
-              {ticket.TicketAssigned && ticket.TicketAssigned.length > 0 ? (
-                <div className="flex flex-col gap-1.5">
-                  {ticket.TicketAssigned.map((a) => (
-                    <div key={a.user_id} className="flex items-center gap-2 group">
-                      <div className="w-7 h-7 rounded-full bg-indigo-500 flex items-center justify-center text-[10px] font-bold text-white shrink-0">
-                        {(`${a.Users.first_name} ${a.Users.last_name}`).split(' ').map((n: string) => n[0]).join('')}
-                      </div>
-                      <span className="text-sm text-gray-700 font-medium flex-1">{`${a.Users.first_name} ${a.Users.last_name}`}</span>
-                      <button
-                        onClick={() => setTicket(t => t ? {
-                          ...t,
-                          TicketAssigned: t.TicketAssigned.filter(x => x.user_id !== a.user_id)
-                        } : t)}
-                        className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-all text-sm leading-none"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <span className="text-sm text-gray-400">Unassigned</span>
-              )}
-
-              {/* Add Assignee */}
-              {availableUsers.length > 0 && (
-                <div className="relative mt-2" ref={assignDropdownRef}>
-                  <button
-                    onClick={() => setShowAssignDropdown(v => !v)}
-                    className="flex items-center gap-1 text-xs text-indigo-500 hover:text-indigo-700 font-medium transition-colors"
-                  >
-                    <span className="text-base leading-none">+</span> Add assignee
-                  </button>
-
-                  {showAssignDropdown && (
-                    <div className="absolute z-10 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg py-1">
-                      {availableUsers.map((user) => (
+          {/* Status bar */}
+          <div className="flex items-center gap-3 px-5 py-3.5 border-b border-gray-100 shrink-0 relative">
+            <div className="relative">
+              <button
+                  onClick={() => setEditing(editing === 'status' ? null : 'status')}
+                  className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-3.5 py-2 rounded-lg transition-colors"
+              >
+                {statusLabel(ticket.status)}
+                <span>▾</span>
+              </button>
+              {editing === 'status' && (
+                  <div className="absolute z-50 mt-1 min-w-[160px] bg-white border border-gray-200 rounded-lg shadow-lg py-1">
+                    {STATUSES.map(s => (
                         <button
-                          key={user.user_id}
-                          onClick={() => {
-                            setTicket(t => t ? {
-															...t,
-															TicketAssigned: [
-																...t.TicketAssigned,
-																{ 
-																	ticket_id: t.ticket_id, 
-																	user_id: user.user_id, 
-																	assigned_date: new Date(), 
-																	Users: user 
-																}
-															]
-														} : t);
-                            setShowAssignDropdown(false);
-                          }}
-                          className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 transition-colors"
+                            key={s}
+                            onClick={() => setStatus(s)}
+                            className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
                         >
-                          <div className="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center text-[10px] font-bold text-white shrink-0">
-                            {(`${user.first_name} ${user.last_name}`).split(' ').map((n: string) => n[0]).join('')}
-                          </div>
-                          <span className="text-sm text-gray-700">{(`${user.first_name} ${user.last_name}`)}</span>
+                          {statusLabel(s)}
                         </button>
+                    ))}
+                  </div>
+              )}
+            </div>
+          </div>
+
+          {/* Scrollable content */}
+          <div className="flex-1 overflow-y-auto">
+            <div className="px-5 py-4 grid grid-cols-2 gap-x-6 gap-y-4 border-b border-gray-100">
+              {/* Assigned To */}
+              <div>
+                <p className="text-xs text-gray-400 font-medium mb-1.5">Assigned To</p>
+                {ticket.TicketAssigned && ticket.TicketAssigned.length > 0 ? (
+                    <div className="flex flex-col gap-1.5">
+                      {ticket.TicketAssigned.map((a: any) => (
+                          <div key={a.user_id} className="flex items-center gap-2 group">
+                            <div className="w-7 h-7 rounded-full bg-indigo-500 flex items-center justify-center text-[10px] font-bold text-white shrink-0">
+                              {(`${a.Users?.first_name ?? 'U'} ${a.Users?.last_name ?? ''}`).trim().split(' ').map((n: string) => n[0]).join('')}
+                            </div>
+                            <span className="text-sm text-gray-700 font-medium flex-1">{`${a.Users?.first_name ?? 'Unknown'} ${a.Users?.last_name ?? 'User'}`}</span>
+                            <button
+                                onClick={() => setTicket(t => t ? {
+                                  ...t,
+                                  TicketAssigned: t.TicketAssigned.filter(x => x.profile_id !== a.profile_id)
+                                } : t)}
+                                className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-all text-sm leading-none"
+                            >
+                              ✕
+                            </button>
+                          </div>
                       ))}
                     </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Watcher */}
-            <div className="relative">
-              <p className="text-xs text-gray-400 font-medium mb-1.5">Watcher</p>
-              <div className="cursor-pointer" onClick={() => setEditing(editing === 'watcher' ? null : 'watcher')}>
-                {watcher ? (
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-full bg-emerald-500 flex items-center justify-center text-[10px] font-bold text-white">
-                      {(`${watcher.first_name} ${watcher.last_name}`).split(' ').map((n: string) => n[0]).join('')}
-                    </div>
-                    <span className="text-sm text-gray-700 font-medium">{(`${watcher.first_name} ${watcher.last_name}`)}</span>
-                  </div>
                 ) : (
-                  <span className="text-sm text-gray-400">—</span>
+                    <span className="text-sm text-gray-400">Unassigned</span>
+                )}
+
+                {/* Add Assignee */}
+                {availableUsers.length > 0 && (
+                    <div className="relative mt-2" ref={assignDropdownRef}>
+                      <button
+                          onClick={() => setShowAssignDropdown(v => !v)}
+                          className="flex items-center gap-1 text-xs text-indigo-500 hover:text-indigo-700 font-medium transition-colors"
+                      >
+                        <span className="text-base leading-none">+</span> Add assignee
+                      </button>
+
+                      {showAssignDropdown && (
+                          <div className="absolute z-10 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg py-1">
+                            {availableUsers.map((user) => (
+                                <button
+                                    key={user.profile_id}
+                                    onClick={() => {
+                                      setTicket(t => t ? {
+                                        ...t,
+                                        TicketAssigned: [
+                                          ...t.TicketAssigned,
+                                          {
+                                            ticket_id: t.ticket_id,
+                                            profile_id: user.profile_id,
+                                            assigned_date: new Date(),
+                                            Users: user
+                                          }
+                                        ]
+                                      } : t);
+                                      setShowAssignDropdown(false);
+                                    }}
+                                    className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 transition-colors"
+                                >
+                                  <div className="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center text-[10px] font-bold text-white shrink-0">
+                                    {(`${user.first_name} ${user.last_name}`).split(' ').map((n: string) => n[0]).join('')}
+                                  </div>
+                                  <span className="text-sm text-gray-700">{(`${user.first_name} ${user.last_name}`)}</span>
+                                </button>
+                            ))}
+                          </div>
+                      )}
+                    </div>
                 )}
               </div>
-              {editing === 'watcher' && (
-                <div className="absolute z-50 mt-1 min-w-[160px] bg-white border border-gray-200 rounded-lg shadow-lg py-1">
-                  <button
-                    onClick={() => { setWatcher(''); setEditing(null); }}
-                    className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                  >
-                    None
-                  </button>
-                  {users.map(u => (
-                    <button
-                      key={u.user_id}
-                      onClick={() => { setWatcher(u.user_id); setEditing(null); }}
-                      className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                    >
-                      {(`${u.first_name} ${u.last_name}`)}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
 
-            {/* Deadline */}
-            <div>
-              <p className="text-xs text-gray-400 font-medium mb-1.5">Deadline</p>
-              {editing === 'deadline' ? (
-                <input
-                  type="date"
-                  value={deadlineDraft}
-                  onChange={e => setDeadlineDraft(e.target.value)}
-                  onBlur={commitDeadline}
-                  onKeyDown={e => { if (e.key === 'Enter') commitDeadline(); if (e.key === 'Escape') setEditing(null); }}
-                  className="text-sm border border-indigo-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  autoFocus
-                />
-              ) : (
-                <div
-                  className={`text-sm font-medium cursor-pointer ${isOverdue ? 'text-red-500' : 'text-gray-700'}`}
-                  onClick={() => startEdit('deadline')}
-                >
-                  {deadlineDisplay ?? <span className="text-gray-400 font-normal">No deadline</span>}
+              {/* Watcher */}
+              <div className="relative">
+                <p className="text-xs text-gray-400 font-medium mb-1.5">Watcher</p>
+                <div className="cursor-pointer" onClick={() => setEditing(editing === 'watcher' ? null : 'watcher')}>
+                  {watcher ? (
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-full bg-emerald-500 flex items-center justify-center text-[10px] font-bold text-white">
+                          {(`${watcher.first_name} ${watcher.last_name}`).split(' ').map((n: string) => n[0]).join('')}
+                        </div>
+                        <span className="text-sm text-gray-700 font-medium">{(`${watcher.first_name} ${watcher.last_name}`)}</span>
+                      </div>
+                  ) : (
+                      <span className="text-sm text-gray-400">—</span>
+                  )}
                 </div>
-              )}
-            </div>
-
-            {/* Tags */}
-            <div className="col-span-2">
-              <p className="text-xs text-gray-400 font-medium mb-1.5">Tags</p>
-              <div className="flex flex-wrap gap-1.5 items-center">
-                {selectedTags.map(tag_id => {
-                  const tag = availableTags.find(t => t.tag_id === tag_id);
-                  return (
-                    <span
-                      key={tag_id}
-                      className={(colorClasses[tag?.color as keyof typeof colorClasses] ?? colorClasses.indigo) + " inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium"}
-                    >
-                      {tag?.name}
-                      <span
-                        className="cursor-pointer opacity-60 hover:opacity-100"
-                        onClick={() => toggleTag(tag_id)}
-                      >×</span>
-                    </span>
-                  );
-                })}
-                <button
-                  onClick={() => setEditing(editing === 'tags' ? null : 'tags')}
-                  className="text-xs text-indigo-600 hover:text-indigo-700 font-medium px-1.5 py-0.5 rounded border border-indigo-200 hover:bg-indigo-50"
-                >
-                  + Add
-                </button>
-              </div>
-              {editing === 'tags' && (
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {availableTags.map(tag => {
-                    const active = selectedTags.includes(tag.tag_id);
-                    return (
+                {editing === 'watcher' && (
+                    <div className="absolute z-50 mt-1 min-w-[160px] bg-white border border-gray-200 rounded-lg shadow-lg py-1">
                       <button
-                        key={tag.tag_id}
-                        onClick={() => toggleTag(tag.tag_id)}
-                        className={(colorClasses[tag.color as keyof typeof colorClasses] ?? colorClasses.indigo) + ` text-xs font-medium px-2.5 py-1 rounded-full border transition-all ${active ? 'ring-1 ring-current' : 'opacity-50'}`}
+                          onClick={() => { setWatcher(''); setEditing(null); }}
+                          className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
                       >
-                        {active ? '✓ ' : '+ '}{tag.name}
+                        None
                       </button>
+                      {users.map(u => (
+                          <button
+                              key={u.profile_id}
+                              onClick={() => { setWatcher(u.profile_id); setEditing(null); }}
+                              className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                          >
+                            {(`${u.first_name} ${u.last_name}`)}
+                          </button>
+                      ))}
+                    </div>
+                )}
+              </div>
+
+              {/* Deadline */}
+              <div>
+                <p className="text-xs text-gray-400 font-medium mb-1.5">Deadline</p>
+                {editing === 'deadline' ? (
+                    <input
+                        type="date"
+                        value={deadlineDraft}
+                        onChange={e => setDeadlineDraft(e.target.value)}
+                        onBlur={commitDeadline}
+                        onKeyDown={e => { if (e.key === 'Enter') commitDeadline(); if (e.key === 'Escape') setEditing(null); }}
+                        className="text-sm border border-indigo-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        autoFocus
+                    />
+                ) : (
+                    <div
+                        className={`text-sm font-medium cursor-pointer ${isOverdue ? 'text-red-500' : 'text-gray-700'}`}
+                        onClick={() => startEdit('deadline')}
+                    >
+                      {deadlineDisplay ?? <span className="text-gray-400 font-normal">No deadline</span>}
+                    </div>
+                )}
+              </div>
+
+              {/* Tags */}
+              <div className="col-span-2">
+                <p className="text-xs text-gray-400 font-medium mb-1.5">Tags</p>
+                <div className="flex flex-wrap gap-1.5 items-center">
+                  {selectedTags.map(tag_id => {
+                    const tag = availableTags.find(t => t.tag_id === tag_id);
+                    return (
+                        <span
+                            key={tag_id}
+                            className={(colorClasses[tag?.color as keyof typeof colorClasses] ?? colorClasses.indigo) + " inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium"}
+                        >
+                      {tag?.name}
+                          <span
+                              className="cursor-pointer opacity-60 hover:opacity-100"
+                              onClick={() => toggleTag(tag_id)}
+                          >×</span>
+                    </span>
                     );
                   })}
+                  <button
+                      onClick={() => setEditing(editing === 'tags' ? null : 'tags')}
+                      className="text-xs text-indigo-600 hover:text-indigo-700 font-medium px-1.5 py-0.5 rounded border border-indigo-200 hover:bg-indigo-50"
+                  >
+                    + Add
+                  </button>
                 </div>
-              )}
-            </div>
-          </div>
-
-          {/* Description */}
-          <div className="px-5 py-4 border-b border-gray-100">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-semibold text-gray-900">Description</h3>
-              {editing !== 'description' && (
-                <button
-                  onClick={() => startEdit('description')}
-                  className="text-xs text-indigo-600 font-medium hover:text-indigo-700"
-                >
-                  Edit
-                </button>
-              )}
-            </div>
-            {editing === 'description' ? (
-              <div className="space-y-2">
-                <textarea
-                  ref={descRef}
-                  value={descDraft}
-                  onChange={e => setDescDraft(e.target.value)}
-                  rows={5}
-                  className="w-full text-sm text-gray-600 border border-indigo-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-                />
-                <div className="flex gap-2">
-                  <button onClick={commitDesc} className="text-xs font-medium bg-indigo-600 text-white px-3 py-1.5 rounded-md hover:bg-indigo-700">Save</button>
-                  <button onClick={() => setEditing(null)} className="text-xs font-medium text-gray-500 px-3 py-1.5 rounded-md hover:bg-gray-100">Cancel</button>
-                </div>
+                {editing === 'tags' && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {availableTags.map(tag => {
+                        const active = selectedTags.includes(tag.tag_id);
+                        return (
+                            <button
+                                key={tag.tag_id}
+                                onClick={() => toggleTag(tag.tag_id)}
+                                className={(colorClasses[tag.color as keyof typeof colorClasses] ?? colorClasses.indigo) + ` text-xs font-medium px-2.5 py-1 rounded-full border transition-all ${active ? 'ring-1 ring-current' : 'opacity-50'}`}
+                            >
+                              {active ? '✓ ' : '+ '}{tag.name}
+                            </button>
+                        );
+                      })}
+                    </div>
+                )}
               </div>
-            ) : (
-              <p
-                className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap cursor-pointer hover:text-gray-800"
-                onClick={() => startEdit('description')}
-              >
-                {ticket.description || <span className="text-gray-400 italic">No description yet. Click to add one.</span>}
-              </p>
-            )}
+            </div>
+
+            {/* Description */}
+            <div className="px-5 py-4 border-b border-gray-100">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-semibold text-gray-900">Description</h3>
+                {editing !== 'description' && (
+                    <button
+                        onClick={() => startEdit('description')}
+                        className="text-xs text-indigo-600 font-medium hover:text-indigo-700"
+                    >
+                      Edit
+                    </button>
+                )}
+              </div>
+              {editing === 'description' ? (
+                  <div className="space-y-2">
+                <textarea
+                    ref={descRef}
+                    value={descDraft}
+                    onChange={e => setDescDraft(e.target.value)}
+                    rows={5}
+                    className="w-full text-sm text-gray-600 border border-indigo-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                />
+                    <div className="flex gap-2">
+                      <button onClick={commitDesc} className="text-xs font-medium bg-indigo-600 text-white px-3 py-1.5 rounded-md hover:bg-indigo-700">Save</button>
+                      <button onClick={() => setEditing(null)} className="text-xs font-medium text-gray-500 px-3 py-1.5 rounded-md hover:bg-gray-100">Cancel</button>
+                    </div>
+                  </div>
+              ) : (
+                  <p
+                      className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap cursor-pointer hover:text-gray-800"
+                      onClick={() => startEdit('description')}
+                  >
+                    {ticket.description || <span className="text-gray-400 italic">No description yet. Click to add one.</span>}
+                  </p>
+              )}
+            </div>
+            <div className="h-4" />
           </div>
 
-          <div className="h-4" />
+          {/* Footer save button */}
+          <div className="flex items-center justify-end gap-3 px-5 py-3.5 border-t border-gray-100 shrink-0 bg-white">
+            <button onClick={onClose} className="text-sm font-medium text-gray-500 px-4 py-2 rounded-lg hover:bg-gray-100">
+              Cancel
+            </button>
+            <button onClick={handleSave} className="text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-lg transition-colors">
+              Save Changes
+            </button>
+          </div>
         </div>
-
-        {/* Footer save button */}
-        <div className="flex items-center justify-end gap-3 px-5 py-3.5 border-t border-gray-100 shrink-0 bg-white">
-          <button onClick={onClose} className="text-sm font-medium text-gray-500 px-4 py-2 rounded-lg hover:bg-gray-100">
-            Cancel
-          </button>
-          <button onClick={handleSave} className="text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-lg transition-colors">
-            Save Changes
-          </button>
-        </div>
-      </div>
-    </>
+      </>
   );
 }
