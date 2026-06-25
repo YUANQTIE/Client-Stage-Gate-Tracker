@@ -500,7 +500,7 @@ model webauthn_credentials {
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model Clients {
   client_id       String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name            String
+  client_name     String
   tin             String
   billing_address String
   Contracts       Contracts[]
@@ -510,26 +510,14 @@ model Clients {
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model CommentImages {
-  comment_id String   @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  image_id   String   @db.Uuid
-  Comments   Comments @relation(fields: [comment_id], references: [comment_id], onDelete: NoAction, onUpdate: NoAction)
-  Images     Images   @relation(fields: [image_id], references: [image_id], onDelete: SetNull)
-
-  @@id([comment_id, image_id])
-  @@schema("public")
-}
-
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model Comments {
-  comment_id     String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  creation_date  DateTime         @default(dbgenerated("(now() AT TIME ZONE 'utc'::text)")) @db.Timestamptz(6)
-  user_id        String           @db.Uuid
-  description    String?
-  CommentImages  CommentImages[]
-  Users          Users            @relation(fields: [user_id], references: [user_id], onDelete: SetNull)
-  GateComments   GateComments[]
-  TicketComments TicketComments[]
+  comment_id    String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  creation_date DateTime @default(dbgenerated("(now() AT TIME ZONE 'utc'::text)")) @db.Timestamptz(6)
+  user_id       String   @db.Uuid
+  description   String?
+  parent_type   String?
+  parent_id     String   @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  Users         Users    @relation(fields: [user_id], references: [user_id], onDelete: SetNull)
 
   @@schema("public")
 }
@@ -557,71 +545,51 @@ model Department {
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model GateComments {
-  comment_id String   @db.Uuid
-  gate_id    String   @db.Uuid
-  Comments   Comments @relation(fields: [comment_id], references: [comment_id], onDelete: SetNull)
-  Gates      Gates    @relation(fields: [gate_id], references: [gate_id], onDelete: SetNull)
-
-  @@id([comment_id, gate_id])
-  @@schema("public")
-}
-
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model Gates {
-  gate_id       String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  creation_date DateTime       @default(dbgenerated("(now() AT TIME ZONE 'utc'::text)")) @db.Timestamptz(6)
-  start_date    DateTime?      @db.Timestamptz(6)
-  end_date      DateTime?      @db.Timestamptz(6)
-  GateComments  GateComments[]
-  ProjectGates  ProjectGates[]
+  gate_id       String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  creation_date DateTime  @default(dbgenerated("(now() AT TIME ZONE 'utc'::text)")) @db.Timestamptz(6)
+  start_date    DateTime? @db.Timestamptz(6)
+  end_date      DateTime? @db.Timestamptz(6)
+  project_id    String    @db.Uuid
+  Projects      Projects  @relation(fields: [project_id], references: [project_id], onDelete: NoAction, onUpdate: NoAction)
 
   @@schema("public")
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model HistoryEvent {
-  history_event_id    String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  performed_by        String                @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  action              action
-  date_performed      DateTime              @default(dbgenerated("(now() AT TIME ZONE 'utc'::text)")) @db.Timestamptz(6)
-  TicketHistoryEvents TicketHistoryEvents[]
+  history_event_id String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  performed_by     String   @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  action           action
+  date_performed   DateTime @default(dbgenerated("(now() AT TIME ZONE 'utc'::text)")) @db.Timestamptz(6)
+  ticket_id        String   @db.Uuid
+  Tickets          Tickets  @relation(fields: [ticket_id], references: [ticket_id], onDelete: NoAction, onUpdate: NoAction)
 
   @@schema("public")
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model Images {
-  image_id      String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  image_src     String          @unique
-  CommentImages CommentImages[]
-  TicketImages  TicketImages[]
-  Users         Users[]
+  image_id    String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  image_src   String  @unique
+  parent_type String?
+  parent_id   String  @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  Users       Users[]
 
-  @@schema("public")
-}
-
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model ModuleWorkflows {
-  workflow_id String    @db.Uuid
-  module_id   String    @db.Uuid
-  Modules     Modules   @relation(fields: [module_id], references: [module_id], onDelete: SetNull, map: "WorkflowModules_module_id_fkey")
-  Workflows   Workflows @relation(fields: [workflow_id], references: [workflow_id], onDelete: SetNull, map: "WorkflowModules_workflow_id_fkey")
-
-  @@id([workflow_id, module_id], map: "WorkflowModules_pkey")
   @@schema("public")
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model Modules {
-  module_id       String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name            String
-  description     String?
-  creation_date   DateTime          @default(dbgenerated("(now() AT TIME ZONE 'utc'::text)")) @db.Timestamptz(6)
-  start_date      DateTime?         @db.Timestamptz(6)
-  end_date        DateTime?         @db.Timestamptz(6)
-  ModuleWorkflows ModuleWorkflows[]
-  PhaseModules    PhaseModules[]
+  module_id     String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name          String
+  description   String?
+  creation_date DateTime    @default(dbgenerated("(now() AT TIME ZONE 'utc'::text)")) @db.Timestamptz(6)
+  start_date    DateTime?   @db.Timestamptz(6)
+  end_date      DateTime?   @db.Timestamptz(6)
+  phase_id      String      @db.Uuid
+  Phases        Phases      @relation(fields: [phase_id], references: [phase_id], onDelete: NoAction, onUpdate: NoAction)
+  Workflows     Workflows[]
 
   @@schema("public")
 }
@@ -637,50 +605,16 @@ model Permissions {
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model PhaseModules {
-  phase_id  String  @db.Uuid
-  module_id String  @db.Uuid
-  Modules   Modules @relation(fields: [module_id], references: [module_id], onDelete: SetNull)
-  Phases    Phases  @relation(fields: [phase_id], references: [phase_id], onDelete: SetNull)
-
-  @@id([phase_id, module_id])
-  @@schema("public")
-}
-
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model Phases {
-  phase_id      String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  phase_id      String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   number        Int
-  start_date    DateTime?      @db.Timestamptz(6)
-  end_date      DateTime?      @db.Timestamptz(6)
-  creation_date DateTime       @default(dbgenerated("(now() AT TIME ZONE 'utc'::text)")) @db.Timestamptz(6)
+  start_date    DateTime? @db.Timestamptz(6)
+  end_date      DateTime? @db.Timestamptz(6)
+  creation_date DateTime  @default(dbgenerated("(now() AT TIME ZONE 'utc'::text)")) @db.Timestamptz(6)
   name          String
-  PhaseModules  PhaseModules[]
-  StagePhases   StagePhases[]
+  stage_id      String    @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  Modules       Modules[]
 
-  @@schema("public")
-}
-
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model ProjectGates {
-  project_id    String   @db.Uuid
-  gate_id       String   @db.Uuid
-  creation_date DateTime @default(dbgenerated("(now() AT TIME ZONE 'utc'::text)")) @db.Timestamptz(6)
-  Gates         Gates    @relation(fields: [gate_id], references: [gate_id], onDelete: SetNull)
-  Projects      Projects @relation(fields: [project_id], references: [project_id], onDelete: SetNull)
-
-  @@id([project_id, gate_id])
-  @@schema("public")
-}
-
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model ProjectStages {
-  project_id String   @db.Uuid
-  stage_id   String   @db.Uuid
-  Projects   Projects @relation(fields: [project_id], references: [project_id], onDelete: SetNull)
-  Stages     Stages   @relation(fields: [stage_id], references: [stage_id], onDelete: SetNull)
-
-  @@id([project_id, stage_id])
   @@schema("public")
 }
 
@@ -691,9 +625,9 @@ model Projects {
   start_date      DateTime?         @db.Timestamptz(6)
   end_date        DateTime?         @db.Timestamptz(6)
   Contracts       Contracts[]
-  ProjectGates    ProjectGates[]
-  ProjectStages   ProjectStages[]
+  Gates           Gates[]
   RoleAssignments RoleAssignments[]
+  Stages          Stages[]
 
   @@schema("public")
 }
@@ -734,26 +668,15 @@ model Roles {
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model StagePhases {
-  stage_id String @db.Uuid
-  phase_id String @db.Uuid
-  Phases   Phases @relation(fields: [phase_id], references: [phase_id], onDelete: SetNull)
-  Stages   Stages @relation(fields: [stage_id], references: [stage_id], onDelete: SetNull)
-
-  @@id([stage_id, phase_id])
-  @@schema("public")
-}
-
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model Stages {
-  stage_id      String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  number        Int             @db.SmallInt
-  start_date    DateTime?       @db.Timestamptz(6)
-  end_date      DateTime?       @db.Timestamptz(6)
-  creation_date DateTime        @default(dbgenerated("(now() AT TIME ZONE 'utc'::text)")) @db.Timestamptz(6)
+  stage_id      String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  number        Int       @db.SmallInt
+  start_date    DateTime? @db.Timestamptz(6)
+  end_date      DateTime? @db.Timestamptz(6)
+  creation_date DateTime  @default(dbgenerated("(now() AT TIME ZONE 'utc'::text)")) @db.Timestamptz(6)
   name          String
-  ProjectStages ProjectStages[]
-  StagePhases   StagePhases[]
+  project_id    String    @db.Uuid
+  Projects      Projects  @relation(fields: [project_id], references: [project_id], onDelete: NoAction, onUpdate: NoAction)
 
   @@schema("public")
 }
@@ -782,39 +705,6 @@ model TicketAssigned {
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model TicketComments {
-  ticket_id  String   @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  comment_id String   @db.Uuid
-  Comments   Comments @relation(fields: [comment_id], references: [comment_id], onDelete: SetNull)
-  Tickets    Tickets  @relation(fields: [ticket_id], references: [ticket_id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@id([ticket_id, comment_id])
-  @@schema("public")
-}
-
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model TicketHistoryEvents {
-  ticket_id        String       @db.Uuid
-  history_event_id String       @db.Uuid
-  HistoryEvent     HistoryEvent @relation(fields: [history_event_id], references: [history_event_id], onDelete: SetNull)
-  Tickets          Tickets      @relation(fields: [ticket_id], references: [ticket_id], onDelete: SetNull)
-
-  @@id([ticket_id, history_event_id])
-  @@schema("public")
-}
-
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model TicketImages {
-  ticket_id String  @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  image_id  String  @db.Uuid
-  Images    Images  @relation(fields: [image_id], references: [image_id], onDelete: SetNull)
-  Tickets   Tickets @relation(fields: [ticket_id], references: [ticket_id], onDelete: SetNull)
-
-  @@id([ticket_id, image_id])
-  @@schema("public")
-}
-
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model TicketSubtasks {
   ticket_id                                  String  @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   subtask_id                                 String  @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -838,27 +728,26 @@ model TicketTags {
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model Tickets {
-  ticket_id                                         String                @id(map: "TIckets_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  assigner_id                                       String?               @db.Uuid
-  watcher_id                                        String?               @db.Uuid
-  assignment_date                                   DateTime              @default(dbgenerated("(now() AT TIME ZONE 'utc'::text)")) @db.Timestamptz(6)
-  creation_date                                     DateTime              @default(dbgenerated("(now() AT TIME ZONE 'utc'::text)")) @db.Timestamptz(6)
-  start_date                                        DateTime?             @db.Timestamptz(6)
-  end_date                                          DateTime?             @db.Timestamptz(6)
-  deadline_date                                     DateTime              @db.Timestamptz(6)
+  ticket_id                                         String           @id(map: "TIckets_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  assigner_id                                       String?          @db.Uuid
+  watcher_id                                        String?          @db.Uuid
+  assignment_date                                   DateTime         @default(dbgenerated("(now() AT TIME ZONE 'utc'::text)")) @db.Timestamptz(6)
+  creation_date                                     DateTime         @default(dbgenerated("(now() AT TIME ZONE 'utc'::text)")) @db.Timestamptz(6)
+  start_date                                        DateTime?        @db.Timestamptz(6)
+  end_date                                          DateTime?        @db.Timestamptz(6)
+  deadline_date                                     DateTime         @db.Timestamptz(6)
   name                                              String
   description                                       String?
-  status                                            status                @default(PENDING)
+  status                                            status           @default(PENDING)
+  workflow_id                                       String           @db.Uuid
+  HistoryEvent                                      HistoryEvent[]
   TicketAssigned                                    TicketAssigned[]
-  TicketComments                                    TicketComments[]
-  TicketHistoryEvents                               TicketHistoryEvents[]
-  TicketImages                                      TicketImages[]
-  TicketSubtasks_TicketSubtasks_subtask_idToTickets TicketSubtasks[]      @relation("TicketSubtasks_subtask_idToTickets")
-  TicketSubtasks_TicketSubtasks_ticket_idToTickets  TicketSubtasks[]      @relation("TicketSubtasks_ticket_idToTickets")
+  TicketSubtasks_TicketSubtasks_subtask_idToTickets TicketSubtasks[] @relation("TicketSubtasks_subtask_idToTickets")
+  TicketSubtasks_TicketSubtasks_ticket_idToTickets  TicketSubtasks[] @relation("TicketSubtasks_ticket_idToTickets")
   TicketTags                                        TicketTags[]
-  Users_Tickets_assigner_idToUsers                  Users?                @relation("Tickets_assigner_idToUsers", fields: [assigner_id], references: [user_id])
-  Users_Tickets_watcher_idToUsers                   Users?                @relation("Tickets_watcher_idToUsers", fields: [watcher_id], references: [user_id])
-  WorkflowsTickets                                  WorkflowsTickets[]
+  Users_Tickets_assigner_idToUsers                  Users?           @relation("Tickets_assigner_idToUsers", fields: [assigner_id], references: [user_id])
+  Users_Tickets_watcher_idToUsers                   Users?           @relation("Tickets_watcher_idToUsers", fields: [watcher_id], references: [user_id])
+  Workflows                                         Workflows        @relation(fields: [workflow_id], references: [workflow_id], onDelete: NoAction, onUpdate: NoAction)
 
   @@schema("public")
 }
@@ -889,27 +778,17 @@ model Users {
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model Workflows {
-  workflow_id      String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name             String
-  description      String?
-  creation_date    DateTime           @default(dbgenerated("(now() AT TIME ZONE 'utc'::text)")) @db.Timestamptz(6)
-  start_date       DateTime?          @db.Timestamptz(6)
-  end_date         DateTime?          @db.Timestamptz(6)
-  is_approved      Boolean            @default(false)
-  ModuleWorkflows  ModuleWorkflows[]
-  WorkflowsTickets WorkflowsTickets[]
+  workflow_id   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name          String
+  description   String?
+  creation_date DateTime  @default(dbgenerated("(now() AT TIME ZONE 'utc'::text)")) @db.Timestamptz(6)
+  start_date    DateTime? @db.Timestamptz(6)
+  end_date      DateTime? @db.Timestamptz(6)
+  is_approved   Boolean   @default(false)
+  module_id     String    @db.Uuid
+  Tickets       Tickets[]
+  Modules       Modules   @relation(fields: [module_id], references: [module_id], onDelete: NoAction, onUpdate: NoAction)
 
-  @@schema("public")
-}
-
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model WorkflowsTickets {
-  workflow_id String    @db.Uuid
-  ticket_id   String    @db.Uuid
-  Tickets     Tickets   @relation(fields: [ticket_id], references: [ticket_id], onDelete: SetNull)
-  Workflows   Workflows @relation(fields: [workflow_id], references: [workflow_id], onDelete: SetNull)
-
-  @@id([workflow_id, ticket_id])
   @@schema("public")
 }
 
