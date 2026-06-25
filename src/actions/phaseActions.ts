@@ -1,12 +1,11 @@
 "use server";
 import { prisma } from "@/lib/prisma";
-import { Prisma } from "@/lib/generated/prisma";
 import { cascadeSoftDeleteModule } from "./moduleActions";
 
 export type EntityFilterStatus = 'active' | 'deleted' | 'all';
 
 /**
- * Creates a new phase and automatically assigns it a scoped sequential number 
+ * Creates a new phase and automatically assigns it a scoped sequential number
  * based on its parent stage.
  *
  * @param {string} stageId - The UUID of the parent stage this phase belongs to.
@@ -47,6 +46,7 @@ export async function createPhase(
     }
 }
 
+
 /**
  * Retrieves a specific phase from the database using its unique ID.
  * Uses a status filter to determine if the phase can be retrieved based on its deletion state:
@@ -71,7 +71,7 @@ export async function getPhaseById(phaseId: string, status: EntityFilterStatus =
                 // is_deleted: isDeletedFilter,
             },
         });
-        
+
         if (!phase) {
             return { success: false, error: "Phase not found or does not match the requested status." };
         }
@@ -194,9 +194,9 @@ export async function softDeletePhase(phaseId: string) {
 
 /**
  * Performs a cascading soft delete on a phase and all its nested children.
- * This function utilizes an existing transaction client (txClient) if provided, ensuring 
- * the operation rolls back entirely if triggered from a parent stage deletion. If executed 
- * independently, it starts a new transaction. It updates the phase's deletion status, 
+ * This function utilizes an existing transaction client (txClient) if provided, ensuring
+ * the operation rolls back entirely if triggered from a parent stage deletion. If executed
+ * independently, it starts a new transaction. It updates the phase's deletion status,
  * queries for child modules, and recursively invokes the module-level cascade function.
  *
  * @param {string} phaseId - The UUID of the phase to archive.
@@ -205,8 +205,8 @@ export async function softDeletePhase(phaseId: string) {
  * Returns `success: true` upon successful cascade.
  * Returns `success: false` and an error message if the operation fails, or throws an error to trigger a rollback if executed within a parent transaction.
  */
-export async function cascadeSoftDeletePhase(phaseId: string, txClient?: Prisma.TransactionClient) {
-    const executeLogic = async (tx: Prisma.TransactionClient) => {
+export async function cascadeSoftDeletePhase(phaseId: string, txClient?: any) {
+    const executeLogic = async (tx: any) => {
         await tx.phases.update({
             where: { phase_id: phaseId },
             data: { /* is_deleted: true, deleted_at: new Date() */ }
@@ -238,9 +238,9 @@ export async function cascadeSoftDeletePhase(phaseId: string, txClient?: Prisma.
 
 /**
  * Swaps the sequential 'number' values of two phases.
- * This function utilizes a Prisma interactive transaction to fetch the current 
- * numbers of both phases and perform the updates simultaneously. This approach 
- * guarantees database consistency by ensuring that if one update fails, the 
+ * This function utilizes a Prisma interactive transaction to fetch the current
+ * numbers of both phases and perform the updates simultaneously. This approach
+ * guarantees database consistency by ensuring that if one update fails, the
  * other is rolled back, preventing duplicate sequence numbers from being assigned.
  *
  * @param {string} phaseId1 - The UUID of the first phase.
@@ -251,7 +251,7 @@ export async function cascadeSoftDeletePhase(phaseId: string, txClient?: Prisma.
  */
 export async function swapPhaseOrder(phaseId1: string, phaseId2: string) {
     try {
-        await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+        await prisma.$transaction(async (tx) => {
             const phase1 = await tx.phases.findUnique({ where: { phase_id: phaseId1 } });
             const phase2 = await tx.phases.findUnique({ where: { phase_id: phaseId2 } });
 

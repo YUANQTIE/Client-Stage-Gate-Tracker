@@ -1,6 +1,5 @@
 "use server";
 import { prisma } from "@/lib/prisma";
-import { Prisma } from "@/lib/generated/prisma";
 import { cascadeSoftDeleteWorkflow } from "./workflowActions";
 
 export type EntityFilterStatus = 'active' | 'deleted' | 'all';
@@ -41,6 +40,7 @@ export async function createModule(
     }
 }
 
+
 /**
  * Retrieves a specific module from the database using its unique ID.
  * Includes the relational link to its parent phase.
@@ -51,7 +51,6 @@ export async function createModule(
  * Security Note: Ensure user authorization claims are verified before execution.
  *
  * @param {string} moduleId - The UUID of the module to retrieve.
- * @param {EntityFilterStatus} [status='active'] - The deletion status filter.
  * @returns {Promise<{success: boolean, data?: any, error?: string}>}
  * Returns `success: true` and the module object if found.
  * Returns `success: false` and an error message if the module does not exist, does not match the requested status, or the query fails.
@@ -69,7 +68,7 @@ export async function getModuleById(moduleId: string, status: EntityFilterStatus
                 Phases: true,
             },
         });
-        
+
         if (!moduleData) {
             return { success: false, error: "Module not found or does not match the requested status." };
         }
@@ -153,6 +152,7 @@ export async function updateModule(
     }
 }
 
+
 /**
  * Performs a "soft delete" on a module by marking it as deleted instead of permanently erasing it.
  * This acts like a recycle bin, preserving historical data and preventing database corruption.
@@ -194,9 +194,9 @@ export async function softDeleteModule(moduleId: string) {
 
 /**
  * Performs a cascading soft delete on a module and all its nested children.
- * This function integrates with Prisma interactive transactions by accepting an optional 
- * txClient. It soft deletes the targeted module, retrieves all dependent workflows, 
- * and iterates through them to execute the workflow-level cascade function, passing 
+ * This function integrates with Prisma interactive transactions by accepting an optional
+ * txClient. It soft deletes the targeted module, retrieves all dependent workflows,
+ * and iterates through them to execute the workflow-level cascade function, passing
  * the transaction forward to maintain consistency.
  *
  * @param {string} moduleId - The UUID of the module to archive.
@@ -205,8 +205,8 @@ export async function softDeleteModule(moduleId: string) {
  * Returns `success: true` upon successful cascade.
  * Returns `success: false` and an error message if the operation fails, or throws an error to trigger a rollback if executed within a parent transaction.
  */
-export async function cascadeSoftDeleteModule(moduleId: string, txClient?: Prisma.TransactionClient) {
-    const executeLogic = async (tx: Prisma.TransactionClient) => {
+export async function cascadeSoftDeleteModule(moduleId: string, txClient?: any) {
+    const executeLogic = async (tx: any) => {
         await tx.modules.update({
             where: { module_id: moduleId },
             data: { /* is_deleted: true, deleted_at: new Date() */ }
