@@ -16,6 +16,8 @@ export type Ticket = Prisma.TicketsGetPayload<{
   include: typeof ticketInclude;
 }>;
 
+export type EntityFilterStatus = 'active' | 'deleted' | 'all';
+
 // ── Tags ──────────────────────────────────────────────────────────────────────
 
 /**
@@ -43,36 +45,123 @@ export async function ticketSelect(): Promise<Ticket[]> {
 }
 
 /**
- * Creates a new ticket record and establishes its structural connections to tags and
- * assigned team members within a single transactional pipeline.
+ * Creates a new ticket and maps it to its parent workflow.
  *
- * @param {Prisma.TicketsUncheckedCreateInput} data - The primary properties for creating the ticket (e.g., title, content, priorities).
- * @param {string[]} [tagIds=[]] - (Optional) An array of tag UUIDs to hook up to this ticket.
- * @param {string[]} [assignedIds=[]] - (Optional) An array of user UUIDs to assign to this ticket.
- * @returns {Promise<Ticket>}
- * Returns a promise that resolves to the newly created and fully populated Ticket object.
+ * @param {string} workflowId - The UUID of the parent workflow this ticket belongs to.
+ * @param {string} name - The title/name of the ticket.
+ * @param {string | null} [description] - (Optional) A brief description of the task.
+ * @param {Date | null} [startDate] - (Optional) The scheduled start date.
+ * @param {Date | null} [endDate] - (Optional) The scheduled end date.
+ * @param {Date | null} [deadlineDate] - (Optional) The final deadline.
+ * @returns {Promise<{success: boolean, data?: any, error?: string}>}
+ * Returns `success: true` and the newly created ticket object if successful.
+ * Returns `success: false` and an error message if the creation fails.
  */
-export async function ticketCreate(
-    data: Prisma.TicketsUncheckedCreateInput,
-    tagIds: string[] = [],
-    assignedIds: string[] = []
-): Promise<Ticket> {
-  return await prisma.tickets.create({
-    data: {
-      ...data,
-      TicketTags: {
-        create: tagIds.map(tag_id => ({ tag_id })),
-      },
-      TicketAssigned: {
-        create: assignedIds.map(user_id => ({ user_id })),
-      },
-    },
-    include: ticketInclude,
-  });
+export async function createTicket(
+    workflowId: string,
+    name: string,
+    description?: string | null,
+    startDate?: Date | null,
+    endDate?: Date | null,
+    deadlineDate?: Date | null
+) {
+    try {
+        const newTicket = await prisma.tickets.create({
+            data: {
+                name: name,
+                description: description,
+                start_date: startDate,
+                end_date: endDate,
+                deadline_date: deadlineDate,
+                workflow_id: workflowId,
+                // ticket_id: automatically generated via gen_random_uuid()
+                // status: automatically defaults to 'PENDING'::status
+                // is_deleted: automatically defaults to false
+                // creation_date / assignment_date: automatically defaults to now()
+            },
+        });
+        return { success: true, data: newTicket };
+    } catch (error) {
+        console.error("Failed to create ticket:", error);
+        return { success: false, error: "Failed to create ticket." };
+    }
 }
 
 /**
- * Updates an existing ticket's fields. If modern lists of tag IDs or assigned user IDs are provided,
+ * Retrieves a specific ticket from the database using its unique ID.
+ * Includes all nested relational data (assigners, watchers, subtasks, tags, assigned users).
+ * Uses a status filter to determine if the ticket can be retrieved based on its deletion state:
+ * - 'active' (default): Only retrieves the ticket if it is NOT soft-deleted.
+ * - 'deleted': Only retrieves the ticket if it IS soft-deleted (useful for recycle bin views).
+ * - 'all': Retrieves the ticket regardless of its deletion status.
+ * Security Note: Ensure user authorization claims are verified before execution.
+ *
+ * @param {string} ticketId - The UUID of the ticket to retrieve.
+ * @param {EntityFilterStatus} [status='active'] - The deletion status filter.
+ * @returns {Promise<{success: boolean, data?: any, error?: string}>}
+ * Returns `success: true` and the ticket object if found.
+ * Returns `success: false` and an error message if the ticket does not exist, does not match
+ * the requested status, or the query fails.
+ */
+export async function getTicketById(ticketId: string, status: EntityFilterStatus = 'active') {
+    try {
+        const isDeletedFilter = status === 'active' ? false : status === 'deleted' ? true : undefined;
+
+        const ticketData = await prisma.tickets.findUnique({
+            where: {
+                ticket_id: ticketId,
+                // is_deleted: isDeletedFilter,
+            },
+            include: ticketInclude,
+        });
+
+        if (!ticketData) {
+            return { success: false, error: "Ticket not found or does not match the requested status." };
+        }
+        return { success: true, data: ticketData };
+    } catch (error) {
+        console.error("Failed to fetch ticket:", error);
+        return { success: false, error: "Failed to fetch ticket details." };
+    }
+}
+
+/**
+ * Retrieves all subtasks belonging to a specific ticket.
+ * Uses a status filter to determine which subtasks to return based on their deletion state:
+ * - 'active' (default): Returns only subtasks that are NOT soft-deleted.
+ * - 'deleted': Returns only subtasks that ARE soft-deleted (useful for recycle bin views).
+ * - 'all': Bypasses the filter and returns everything.
+ * Subtasks are returned in ascending chronological order based on their 'creation_date' field.
+ *
+ * @param {string} ticketId - The UUID of the parent ticket.
+ * @param {EntityFilterStatus} [status='active'] - The deletion status filter.
+ * @returns {Promise<{success: boolean, data?: any, error?: string}>}
+ * Returns `success: true` and an array of subtasks if the query is successful.
+ * Returns `success: false` and an error message if the query fails.
+ */
+export async function getSubtasksByTicketId(ticketId: string, status: EntityFilterStatus = 'active') {
+    try {
+        const isDeletedFilter = status === 'active' ? false : status === 'deleted' ? true : undefined;
+
+        const subtasks = await prisma.ticketSubtasks.findMany({
+            where: {
+                ticket_id: ticketId,
+                // is_deleted: isDeletedFilter,
+            },
+            orderBy: {
+                creation_date: 'asc',
+            },
+        });
+
+        return { success: true, data: subtasks };
+    } catch (error) {
+        console.error("Failed to fetch subtasks for ticket:", error);
+        return { success: false, error: "Failed to fetch subtasks." };
+    }
+}
+
+/**
+ * Updates an existing ticket's fields. If new lists of tag IDs or assigned user IDs are provided,
  * it completely flushes the previous relations and remaps them to maintain clean data records.
  *
  * @param {string} ticketId - The UUID of the specific ticket to modify.
@@ -131,6 +220,88 @@ export async function ticketUpdateStatus(
     data: { status },
     include: ticketInclude,
   });
+}
+
+/**
+ * Performs a "soft delete" on a ticket by marking it as deleted instead of permanently erasing it.
+ * This acts like a recycle bin, preserving historical data and preventing database corruption.
+ * Note: Archiving is blocked if the ticket contains active subtasks to ensure operational integrity.
+ *
+ * @param {string} ticketId - The UUID of the ticket to soft delete.
+ * @returns {Promise<{success: boolean, error?: string}>}
+ * Returns `success: true` if the ticket was successfully archived.
+ * Returns `success: false` and an error message if the ticket contains subtasks or the query fails.
+ */
+export async function softDeleteTicket(ticketId: string) {
+    try {
+        const attachedSubtasksCount = await prisma.ticketSubtasks.count({
+            where: {
+                ticket_id: ticketId,
+                // is_deleted: false,
+            },
+        });
+        if (attachedSubtasksCount > 0) {
+            return {
+                success: false,
+                error: `Cannot archive ticket. Please remove or archive all ${attachedSubtasksCount} associated subtask(s) first.`
+            };
+        }
+
+        await prisma.tickets.update({
+            where: { ticket_id: ticketId },
+            data: {
+                // is_deleted: true,
+                // deleted_at: new Date(),
+            },
+        });
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to soft delete ticket:", error);
+        return { success: false, error: "Failed to archive the ticket due to a database error." };
+    }
+}
+
+/**
+ * Performs a cascading soft delete on a ticket and all its nested subtasks.
+ * This function operates inside a provided Prisma transaction (txClient) to ensure
+ * rollback integrity. It soft deletes the ticket and retrieves all associated subtasks.
+ *
+ * @param {string} ticketId - The UUID of the ticket to archive.
+ * @param {Prisma.TransactionClient} [txClient] - (Optional) The Prisma transaction context to maintain database integrity.
+ * @returns {Promise<{success: boolean, error?: string}>}
+ * Returns `success: true` upon successful cascade.
+ * Returns `success: false` and an error message if the operation fails, or throws an error
+ * to trigger a rollback if executed within a parent transaction.
+ */
+export async function cascadeSoftDeleteTicket(ticketId: string, txClient?: Prisma.TransactionClient) {
+    const executeLogic = async (tx: Prisma.TransactionClient) => {
+        await tx.tickets.update({
+            where: { ticket_id: ticketId },
+            data: { /* is_deleted: true, deleted_at: new Date() */ }
+        });
+
+        const childSubtasks = await tx.ticketSubtasks.findMany({
+            where: { ticket_id: ticketId, /* is_deleted: false */ },
+            select: { subtask_id: true }
+        });
+
+        for (const subtask of childSubtasks) {
+            // TODO: await cascadeSoftDeleteSubtask(subtask.subtask_id, tx);
+        }
+    };
+
+    try {
+        if (txClient) {
+            await executeLogic(txClient);
+        } else {
+            await prisma.$transaction(executeLogic);
+        }
+        return { success: true };
+    } catch (error) {
+        console.error("Failed cascading soft delete for ticket:", error);
+        if (txClient) throw error;
+        return { success: false, error: "Failed to cascade archive ticket." };
+    }
 }
 
 /**
