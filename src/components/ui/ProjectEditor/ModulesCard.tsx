@@ -1,7 +1,7 @@
 "use client";
 
 import { useState,useEffect } from "react";
-import { ticketSelect } from "@/actions/ticketActions";
+import { selectTicket } from "@/actions/ticketActions";
 
 interface Workflow {
   id: string;
@@ -49,7 +49,7 @@ export function ModulesCard({ activePhase }: ModulesCardProps) {
 
 	useEffect(()=>{
 			(async () => {
-				const tickets = await ticketSelect();
+				const tickets = await selectTicket();
 				const statusValues = {
           PENDING: 0,
           IN_PROGRESS: 0,
