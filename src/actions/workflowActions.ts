@@ -211,8 +211,8 @@ export async function softDeleteWorkflow(workflowId: string) {
  * Returns `success: true` upon successful cascade.
  * Returns `success: false` and an error message if the operation fails, or throws an error to trigger a rollback if executed within a parent transaction.
  */
-export async function cascadeSoftDeleteWorkflow(workflowId: string, txClient?: any) {
-    const executeLogic = async (tx: any) => {
+export async function cascadeSoftDeleteWorkflow(workflowId: string, txClient?: Prisma.TransactionClient) {
+    const executeLogic = async (tx: Prisma.TransactionClient) => {
         await tx.workflows.update({
             where: { workflow_id: workflowId },
             data: { /* is_deleted: true, deleted_at: new Date() */ }
