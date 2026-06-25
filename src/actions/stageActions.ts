@@ -69,7 +69,7 @@ export async function getStageById(stageId: string, status: EntityFilterStatus =
         const stage = await prisma.stages.findUnique({
             where: {
                 stage_id: stageId,
-                // is_deleted: isDeletedFilter,
+                is_deleted: isDeletedFilter,
             },
             include: {
                 Projects: true,
@@ -107,7 +107,7 @@ export async function getPhasesByStageId(stageId: string, status: EntityFilterSt
         const phases = await prisma.phases.findMany({
             where: {
                 stage_id: stageId,
-                // is_deleted: isDeletedFilter,
+                is_deleted: isDeletedFilter,
             },
             orderBy: {
                 number: 'asc',
@@ -172,7 +172,7 @@ export async function softDeleteStage(stageId: string) {
         const attachedPhasesCount = await prisma.phases.count({
             where: {
                 stage_id: stageId,
-                // is_deleted: false
+                is_deleted: false
             },
         });
         if (attachedPhasesCount > 0) {
@@ -185,8 +185,8 @@ export async function softDeleteStage(stageId: string) {
         await prisma.stages.update({
             where: { stage_id: stageId },
             data: {
-                // is_deleted: true,
-                // deleted_at: new Date(),
+                is_deleted: true,
+                deleted_at: new Date(),
             },
         });
         return { success: true };
@@ -213,11 +213,11 @@ export async function cascadeSoftDeleteStage(stageId: string, txClient?: Prisma.
     const executeLogic = async (tx: Prisma.TransactionClient) => {
         await tx.stages.update({
             where: { stage_id: stageId },
-            data: { /* is_deleted: true, deleted_at: new Date() */ }
+            data: { is_deleted: true, deleted_at: new Date() }
         });
 
         const childPhases = await tx.phases.findMany({
-            where: { stage_id: stageId, /* is_deleted: false */ },
+            where: { stage_id: stageId, is_deleted: false },
             select: { phase_id: true }
         });
 

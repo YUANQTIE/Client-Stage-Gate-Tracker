@@ -68,7 +68,7 @@ export async function getPhaseById(phaseId: string, status: EntityFilterStatus =
         const phase = await prisma.phases.findUnique({
             where: {
                 phase_id: phaseId,
-                // is_deleted: isDeletedFilter,
+                is_deleted: isDeletedFilter,
             },
         });
         
@@ -103,7 +103,7 @@ export async function getModulesByPhaseId(phaseId: string, status: EntityFilterS
         const modules = await prisma.modules.findMany({
             where: {
                 phase_id: phaseId,
-                // is_deleted: isDeletedFilter,
+                is_deleted: isDeletedFilter,
             },
             orderBy: {
                 creation_date: 'asc',
@@ -168,7 +168,7 @@ export async function softDeletePhase(phaseId: string) {
         const attachedModulesCount = await prisma.modules.count({
             where: {
                 phase_id: phaseId,
-                // is_deleted: false
+                is_deleted: false
             },
         });
         if (attachedModulesCount > 0) {
@@ -181,8 +181,8 @@ export async function softDeletePhase(phaseId: string) {
         await prisma.phases.update({
             where: { phase_id: phaseId },
             data: {
-                // is_deleted: true,
-                // deleted_at: new Date(),
+                is_deleted: true,
+                deleted_at: new Date(),
             },
         });
         return { success: true };
@@ -209,16 +209,16 @@ export async function cascadeSoftDeletePhase(phaseId: string, txClient?: Prisma.
     const executeLogic = async (tx: Prisma.TransactionClient) => {
         await tx.phases.update({
             where: { phase_id: phaseId },
-            data: { /* is_deleted: true, deleted_at: new Date() */ }
+            data: { is_deleted: true, deleted_at: new Date() }
         });
 
         const childModules = await tx.modules.findMany({
-            where: { phase_id: phaseId, /* is_deleted: false */ },
+            where: { phase_id: phaseId, is_deleted: false },
             select: { module_id: true }
         });
 
-        for (const module of childModules) {
-            await cascadeSoftDeleteModule(module.module_id, tx);
+        for (const childModule of childModules) {
+            await cascadeSoftDeleteModule(childModule.module_id, tx);
         }
     };
 

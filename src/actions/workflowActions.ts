@@ -1,7 +1,7 @@
 "use server";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/lib/generated/prisma";
-// import { cascadeSoftDeleteTicket } from "./ticketActions";
+import { cascadeSoftDeleteTicket } from "./ticketActions";
 
 export type EntityFilterStatus = 'active' | 'deleted' | 'all';
 
@@ -66,7 +66,7 @@ export async function getWorkflowById(workflowId: string, status: EntityFilterSt
         const workflowData = await prisma.workflows.findUnique({
             where: {
                 workflow_id: workflowId,
-                // is_deleted: isDeletedFilter,
+                is_deleted: isDeletedFilter,
             },
             include: {
                 Modules: true,
@@ -104,7 +104,7 @@ export async function getTicketsByWorkflowId(workflowId: string, status: EntityF
         const tickets = await prisma.tickets.findMany({
             where: {
                 workflow_id: workflowId,
-                // is_deleted: isDeletedFilter,
+                is_deleted: isDeletedFilter,
             },
             orderBy: {
                 creation_date: 'asc',
@@ -174,7 +174,7 @@ export async function softDeleteWorkflow(workflowId: string) {
         const attachedTicketsCount = await prisma.tickets.count({
             where: {
                 workflow_id: workflowId,
-                // is_deleted: false
+                is_deleted: false
             },
         });
         if (attachedTicketsCount > 0) {
@@ -187,8 +187,8 @@ export async function softDeleteWorkflow(workflowId: string) {
         await prisma.workflows.update({
             where: { workflow_id: workflowId },
             data: {
-                // is_deleted: true,
-                // deleted_at: new Date(),
+                is_deleted: true,
+                deleted_at: new Date(),
             },
         });
         return { success: true };
@@ -215,16 +215,16 @@ export async function cascadeSoftDeleteWorkflow(workflowId: string, txClient?: P
     const executeLogic = async (tx: Prisma.TransactionClient) => {
         await tx.workflows.update({
             where: { workflow_id: workflowId },
-            data: { /* is_deleted: true, deleted_at: new Date() */ }
+            data: { is_deleted: true, deleted_at: new Date() }
         });
 
         const childTickets = await tx.tickets.findMany({
-            where: { workflow_id: workflowId, /* is_deleted: false */ },
+            where: { workflow_id: workflowId, is_deleted: false },
             select: { ticket_id: true }
         });
 
         for (const ticket of childTickets) {
-            // TODO: await cascadeSoftDeleteTicket(ticket.ticket_id, tx);
+            await cascadeSoftDeleteTicket(ticket.ticket_id, tx);
         }
     };
 

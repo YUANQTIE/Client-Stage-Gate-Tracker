@@ -63,7 +63,7 @@ export async function getModuleById(moduleId: string, status: EntityFilterStatus
         const moduleData = await prisma.modules.findUnique({
             where: {
                 module_id: moduleId,
-                // is_deleted: isDeletedFilter,
+                is_deleted: isDeletedFilter,
             },
             include: {
                 Phases: true,
@@ -101,7 +101,7 @@ export async function getWorkflowsByModuleId(moduleId: string, status: EntityFil
         const workflows = await prisma.workflows.findMany({
             where: {
                 module_id: moduleId,
-                // is_deleted: isDeletedFilter,
+                is_deleted: isDeletedFilter,
             },
             orderBy: {
                 creation_date: 'asc',
@@ -168,7 +168,7 @@ export async function softDeleteModule(moduleId: string) {
         const attachedWorkflowsCount = await prisma.workflows.count({
             where: {
                 module_id: moduleId,
-                // is_deleted: false
+                is_deleted: false
             },
         });
         if (attachedWorkflowsCount > 0) {
@@ -181,8 +181,8 @@ export async function softDeleteModule(moduleId: string) {
         await prisma.modules.update({
             where: { module_id: moduleId },
             data: {
-                // is_deleted: true,
-                // deleted_at: new Date(),
+                is_deleted: true,
+                deleted_at: new Date(),
             },
         });
         return { success: true };
@@ -209,11 +209,11 @@ export async function cascadeSoftDeleteModule(moduleId: string, txClient?: Prism
     const executeLogic = async (tx: Prisma.TransactionClient) => {
         await tx.modules.update({
             where: { module_id: moduleId },
-            data: { /* is_deleted: true, deleted_at: new Date() */ }
+            data: { is_deleted: true, deleted_at: new Date() }
         });
 
         const childWorkflows = await tx.workflows.findMany({
-            where: { module_id: moduleId, /* is_deleted: false */ },
+            where: { module_id: moduleId, is_deleted: false },
             select: { workflow_id: true }
         });
 
