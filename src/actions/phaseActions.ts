@@ -205,7 +205,7 @@ export async function softDeletePhase(phaseId: string) {
  * Returns `success: true` upon successful cascade.
  * Returns `success: false` and an error message if the operation fails, or throws an error to trigger a rollback if executed within a parent transaction.
  */
-export async function cascadeSoftDeletePhase(phaseId: string, txClient?: any) {
+export async function cascadeSoftDeletePhase(phaseId: string, txClient?: Prisma.TransactionClient) {
     const executeLogic = async (tx: Prisma.TransactionClient) => {
         await tx.phases.update({
             where: { phase_id: phaseId },
