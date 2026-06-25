@@ -205,7 +205,7 @@ export async function softDeleteModule(moduleId: string) {
  * Returns `success: true` upon successful cascade.
  * Returns `success: false` and an error message if the operation fails, or throws an error to trigger a rollback if executed within a parent transaction.
  */
-export async function cascadeSoftDeleteModule(moduleId: string, txClient?: any) {
+export async function cascadeSoftDeleteModule(moduleId: string, txClient?: Prisma.TransactionClient) {
     const executeLogic = async (tx: Prisma.TransactionClient) => {
         await tx.modules.update({
             where: { module_id: moduleId },
