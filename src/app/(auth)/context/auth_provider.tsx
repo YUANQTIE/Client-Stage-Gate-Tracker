@@ -9,6 +9,7 @@ import {
 } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { ProfileType } from "@/types";
+import { useRouter } from "next/navigation";
 interface prop {
   children: ReactNode;
 }
@@ -20,9 +21,11 @@ const auth_context = createContext<{ user: ProfileType | null }>({
 export function AuthProvider({ children }: prop) {
   const [user, setUser] = useState<ProfileType | null>(null);
   const supabase = createClient();
+  const router = useRouter();
 
   useEffect(() => {
-    async function set_prisma_user(id: string) {
+    //only redirect on new logins
+    async function set_prisma_user(id: string, redirect = false) {
       if (id != "") {
         const { data, error } = await supabase
           .from("Profiles")
@@ -50,6 +53,12 @@ export function AuthProvider({ children }: prop) {
         };
 
         setUser(new_user);
+
+        if (redirect && new_user?.client_id) {
+          router.push("/client/" + new_user?.client_id);
+        } else if (redirect && new_user?.department_id) {
+          router.push("/department_id/" + new_user?.department_id);
+        }
       }
     }
 
@@ -63,7 +72,8 @@ export function AuthProvider({ children }: prop) {
         setUser(null);
         return;
       }
-      set_prisma_user(session.user.id);
+      const redirect = _event == "SIGNED_IN";
+      set_prisma_user(session.user.id, redirect);
     });
     return () => subscription.unsubscribe();
   }, []);
