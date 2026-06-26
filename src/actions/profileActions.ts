@@ -1,6 +1,6 @@
 "use server";
 import { prisma } from "@/lib/prisma";
-import { UserType } from "@/types";
+import { ProfileType } from "@/types";
 import { EntityFilterStatus } from "./ticketActions";
 
 /**
@@ -53,15 +53,15 @@ export async function getUserById(userId: string, status: EntityFilterStatus = '
 /**
  * Updates an existing user's details in the database.
  *
- * @param {UserType} user - The user object containing the updated field values.
+ * @param {ProfileType} user - The user object containing the updated field values.
  * @returns {Promise<{success: boolean, data?: any, error?: string}>}
  * Returns `success: true` and the updated user object if successful.
  * Returns `success: false` and an error message if the update fails.
  */
-export async function updateProfile(user: UserType) {
+export async function updateProfile(user: ProfileType) {
   try {
     const updatedUser = await prisma.profiles.update({
-      where: { user_id: user.user_id },
+      where: { profile_id: user.profile_id },
       data: {
         first_name: user.first_name,
         last_name: user.last_name,
@@ -70,6 +70,8 @@ export async function updateProfile(user: UserType) {
         client_id: user.client_id == '' ? null : user.client_id,
         department_id: user.department_id,
         email: user.email,
+        is_deleted: user.is_deleted,
+        deleted_at: user.deleted_at
       },
     });
     return { success: true, data: updatedUser };
@@ -89,11 +91,11 @@ export async function updateProfile(user: UserType) {
  * Returns `success: true` if the user was successfully archived.
  * Returns `success: false` and an error message if the user has assignments or the query fails.
  */
-export async function softDeleteUser(userId: string) {
+export async function softDeleteUser(profileId: string) {
   try {
     const activeAssignmentsCount = await prisma.ticketAssigned.count({
       where: {
-        user_id: userId,
+        profile_id: profileId,
         // is_deleted: false,
       },
     });
@@ -105,7 +107,7 @@ export async function softDeleteUser(userId: string) {
     }
 
     await prisma.users.update({
-      where: { id: userId },
+      where: { id: profileId },
       data: {
         // is_deleted: true,
         // deleted_at: new Date(),

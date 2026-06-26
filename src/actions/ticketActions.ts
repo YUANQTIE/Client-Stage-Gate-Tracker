@@ -3,6 +3,9 @@
 import { prisma } from "@/lib/prisma";
 import { Prisma, status as TicketStatus } from "@/lib/generated/prisma";
 
+
+export type EntityFilterStatus = 'active' | 'deleted' | 'all';
+
 export async function selectTicket() {
     try {
         return await prisma.tickets.findMany({
