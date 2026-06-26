@@ -199,7 +199,7 @@
 ---
 
 ### Scenario 1: Valid User Login (Test Case SL_01_ClientLogin-1)
-* **Status:** 
+* **Status:** PASSED
 
 ##### Actions Performed:
 1. Opened the login screen and entered an email address belonging to a registered account.
@@ -213,7 +213,7 @@
 ---
 
 ### Scenario 2: Invalid Login - Incorrect Password (Test Case SL_01_ClientLogin-2)
-* **Status:** 
+* **Status:** PASSED
 
 ##### Actions Performed:
 1. Entered a valid, registered email address.
@@ -227,7 +227,7 @@
 ---
 
 ### Scenario 3: Invalid Login - Unregistered Email (Test Case SL_01_ClientLogin-3)
-* **Status:** 
+* **Status:** PASSED
 
 ##### Actions Performed:
 1. Entered an email address that is not registered in the system.
@@ -241,7 +241,7 @@
 ---
 
 ### Scenario 4: Invalid Login - Incorrect OTP (Test Case SL_01_ClientLogin-4)
-* **Status:** 
+* **Status:** BLOCKED
 
 ##### Actions Performed:
 1. Entered a valid, registered email address.
