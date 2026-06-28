@@ -40,6 +40,7 @@ export function ClientSignupForm() {
   })
 
   const [errors, setErrors] = useState<Errors>({})
+  const [apiError, setApiError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
   function set(key: keyof Fields) {
@@ -80,6 +81,7 @@ export function ClientSignupForm() {
 
   async function handleSubmit(e: React.BaseSyntheticEvent) {
     e.preventDefault()
+    setApiError(null)
     const errs = validate()
     if (Object.keys(errs).length > 0) {
       setErrors(errs)
@@ -92,7 +94,11 @@ export function ClientSignupForm() {
       //   fields.companyName, fields.email, fields.password
       //   fields.streetNumber, fields.streetName, fields.city, fields.country
       //   fields.tin, fields.phone
+      //
+      // On API error: call setApiError('Your error message here') and return
       router.push('/login')
+    } catch {
+      setApiError('Something went wrong. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -281,6 +287,12 @@ export function ClientSignupForm() {
           <p className="text-xs text-red-500 mt-1">{errors.phone}</p>
         )}
       </div>
+
+      {apiError && (
+        <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+          {apiError}
+        </p>
+      )}
 
       <Button type="submit" className="mt-2" disabled={loading}>
         {loading ? 'Creating account...' : 'Sign Up'}
