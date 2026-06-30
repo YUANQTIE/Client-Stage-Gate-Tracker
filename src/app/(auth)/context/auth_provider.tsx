@@ -9,7 +9,7 @@ import {
 } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { ProfileType } from "@/types";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 interface prop {
   children: ReactNode;
 }
@@ -22,6 +22,7 @@ export function AuthProvider({ children }: prop) {
   const [user, setUser] = useState<ProfileType | null>(null);
   const supabase = createClient();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     //only redirect on new logins
@@ -72,7 +73,9 @@ export function AuthProvider({ children }: prop) {
         setUser(null);
         return;
       }
-      const redirect = _event == "SIGNED_IN";
+      
+      const onAuthPage = pathname === '/login' || pathname === '/signup' || pathname === '/client-signup' || pathname === '/';
+      const redirect = _event == "SIGNED_IN" && onAuthPage;
       set_prisma_user(session.user.id, redirect);
     });
     return () => subscription.unsubscribe();
