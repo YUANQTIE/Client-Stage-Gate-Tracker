@@ -9,6 +9,10 @@ import { Button } from '@/components/ui/button'
 import { PasswordInput } from '@/components/auth/PasswordInput'
 
 type Fields = {
+  // TODO: confirm these map to User.firstName and User.lastName on the backend
+  // (per Byron's data model: User → Client → Contract)
+  firstName: string
+  lastName: string
   companyName: string
   email: string
   password: string
@@ -27,6 +31,8 @@ export function ClientSignupForm() {
   const router = useRouter()
 
   const [fields, setFields] = useState<Fields>({
+    firstName: '',
+    lastName: '',
     companyName: '',
     email: '',
     password: '',
@@ -62,6 +68,8 @@ export function ClientSignupForm() {
     const e: Errors = {}
     const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fields.email)
 
+    if (!fields.firstName.trim()) e.firstName = 'First name is required.'
+    if (!fields.lastName.trim()) e.lastName = 'Last name is required.'
     if (!fields.companyName.trim()) e.companyName = 'Company name is required.'
     if (!fields.email) e.email = 'Email address is required.'
     else if (!emailOk) e.email = 'Enter a valid email address.'
@@ -91,7 +99,7 @@ export function ClientSignupForm() {
     try {
       // TODO: connect to backend
       // Available fields:
-      //   fields.companyName, fields.email, fields.password
+      //   fields.firstName, fields.lastName, fields.companyName, fields.email, fields.password
       //   fields.streetNumber, fields.streetName, fields.city, fields.country
       //   fields.tin, fields.phone
       //
@@ -110,6 +118,40 @@ export function ClientSignupForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+
+      {/* First Name + Last Name */}
+      <div className="flex gap-3">
+        <div className="flex-1 min-w-0">
+          <Label htmlFor="firstName" className="mb-1.5">First Name</Label>
+          <Input
+            id="firstName"
+            name="firstName"
+            type="text"
+            placeholder="Jane"
+            value={fields.firstName}
+            onChange={set('firstName')}
+            className={errClass('firstName')}
+          />
+          {errors.firstName && (
+            <p className="text-xs text-red-500 mt-1">{errors.firstName}</p>
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <Label htmlFor="lastName" className="mb-1.5">Last Name</Label>
+          <Input
+            id="lastName"
+            name="lastName"
+            type="text"
+            placeholder="Smith"
+            value={fields.lastName}
+            onChange={set('lastName')}
+            className={errClass('lastName')}
+          />
+          {errors.lastName && (
+            <p className="text-xs text-red-500 mt-1">{errors.lastName}</p>
+          )}
+        </div>
+      </div>
 
       {/* Company Name */}
       <div>
