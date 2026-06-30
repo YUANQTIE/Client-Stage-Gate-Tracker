@@ -35,4 +35,6 @@ export interface ProfileType {
   department_id: string | null,
   email: string
   job_title: string | null,
+  is_deleted: boolean,
+  deleted_at: Date | null
 }
