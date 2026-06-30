@@ -6,7 +6,7 @@ import { cascadeSoftDeletePhase } from "./phaseActions";
 export type EntityFilterStatus = 'active' | 'deleted' | 'all';
 
 /**
- * Creates a new stage and automatically assigns it a scoped sequential number 
+ * Creates a new stage and automatically assigns it a scoped sequential number
  * based on its parent project.
  *
  * @param {string} projectId - The UUID of the parent project this stage belongs to.
@@ -75,7 +75,7 @@ export async function getStageById(stageId: string, status: EntityFilterStatus =
                 Projects: true,
             },
         });
-        
+
         if (!stage) {
             return { success: false, error: "Stage not found or does not match the requested status." };
         }
@@ -199,9 +199,9 @@ export async function softDeleteStage(stageId: string) {
 /**
  * Performs a cascading soft delete on a stage and all its nested children.
  * This function manages transaction continuity: if an existing transaction client (txClient)
- * is passed from a higher-level function, it executes within that transaction to ensure 
+ * is passed from a higher-level function, it executes within that transaction to ensure
  * complete rollback on failure. If none is provided, it initiates a new Prisma interactive transaction.
- * The function soft deletes the stage, fetches all direct child phases, and recursively calls 
+ * The function soft deletes the stage, fetches all direct child phases, and recursively calls
  * the phase-level cascade function, passing the transaction context forward.
  *
  * @param {string} stageId - The UUID of the stage to archive.
@@ -242,9 +242,9 @@ export async function cascadeSoftDeleteStage(stageId: string, txClient?: Prisma.
 
 /**
  * Swaps the sequential 'number' values of two stages.
- * This function utilizes a Prisma interactive transaction to fetch the current 
- * numbers of both stages and perform the updates simultaneously. This approach 
- * guarantees database consistency by ensuring that if one update fails, the 
+ * This function utilizes a Prisma interactive transaction to fetch the current
+ * numbers of both stages and perform the updates simultaneously. This approach
+ * guarantees database consistency by ensuring that if one update fails, the
  * other is rolled back, preventing duplicate sequence numbers from being assigned.
  *
  * @param {string} stageId1 - The UUID of the first stage.

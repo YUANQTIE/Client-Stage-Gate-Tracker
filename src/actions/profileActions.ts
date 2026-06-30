@@ -29,7 +29,7 @@ export async function selectProfile() {
  * Returns `success: false` and an error message if the user does not exist, does not match
  * the requested status, or the query fails.
  */
-export async function getUserById(userId: string, status: EntityFilterStatus = 'active') {
+export async function getProfileById(userId: string, status: EntityFilterStatus = 'active') {
   try {
     const isDeletedFilter = status === 'active' ? false : status === 'deleted' ? true : undefined;
 
@@ -53,28 +53,26 @@ export async function getUserById(userId: string, status: EntityFilterStatus = '
 /**
  * Updates an existing user's details in the database.
  *
- * @param {ProfileType} user - The user object containing the updated field values.
+ * @param {ProfileType} profile - The user object containing the updated field values.
  * @returns {Promise<{success: boolean, data?: any, error?: string}>}
  * Returns `success: true` and the updated user object if successful.
  * Returns `success: false` and an error message if the update fails.
  */
-export async function updateProfile(user: ProfileType) {
+export async function updateProfile(profile: ProfileType) {
   try {
-    const updatedUser = await prisma.profiles.update({
-      where: { profile_id: user.profile_id },
+    const updatedProfile = await prisma.profiles.update({
+      where: { profile_id: profile.profile_id },
       data: {
-        first_name: user.first_name,
-        last_name: user.last_name,
-        phone: user.phone,
-        image_id: user.image_id == '' ? null : user.image_id,
-        client_id: user.client_id == '' ? null : user.client_id,
-        department_id: user.department_id,
-        email: user.email,
-        is_deleted: user.is_deleted,
-        deleted_at: user.deleted_at
+        first_name: profile.first_name,
+        last_name: profile.last_name,
+        phone: profile.phone,
+        image_id: profile.image_id == '' ? null : profile.image_id,
+        client_id: profile.client_id == '' ? null : profile.client_id,
+        department_id: profile.department_id,
+        email: profile.email,
       },
     });
-    return { success: true, data: updatedUser };
+    return { success: true, data: updatedProfile };
   } catch (error) {
     console.error("Failed to update user:", error);
     return { success: false, error: "Failed to update user details." };
@@ -86,16 +84,16 @@ export async function updateProfile(user: ProfileType) {
  * This acts like a recycle bin, preserving historical data and preventing database corruption.
  * Note: Archiving is blocked if the user has active ticket assignments to ensure operational integrity.
  *
- * @param {string} userId - The UUID of the user to soft delete.
+ * @param {string} profile_id - The UUID of the user to soft delete.
  * @returns {Promise<{success: boolean, error?: string}>}
  * Returns `success: true` if the user was successfully archived.
  * Returns `success: false` and an error message if the user has assignments or the query fails.
  */
-export async function softDeleteUser(profileId: string) {
+export async function softDeleteProfile(profile_id: string) {
   try {
     const activeAssignmentsCount = await prisma.ticketAssigned.count({
       where: {
-        profile_id: profileId,
+        profile_id: profile_id,
         // is_deleted: false,
       },
     });
@@ -107,7 +105,7 @@ export async function softDeleteUser(profileId: string) {
     }
 
     await prisma.users.update({
-      where: { id: profileId },
+      where: { id: profile_id },
       data: {
         // is_deleted: true,
         // deleted_at: new Date(),
