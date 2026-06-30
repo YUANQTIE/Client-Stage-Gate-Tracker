@@ -9,7 +9,7 @@ import {
 } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { ProfileType } from "@/types";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 interface prop {
   children: ReactNode;
 }
@@ -22,6 +22,7 @@ export function AuthProvider({ children }: prop) {
   const [user, setUser] = useState<ProfileType | null>(null);
   const supabase = createClient();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     //only redirect on new logins
@@ -54,11 +55,12 @@ export function AuthProvider({ children }: prop) {
 
         setUser(new_user);
 
-        if (redirect && new_user?.client_id) {
+        const onAuthPage = pathname === '/login' || pathname === '/signup' || pathname === '/client-signup' || pathname === '/';
+        if (redirect && onAuthPage && new_user?.client_id) {
           router.push("/client/" + new_user?.client_id);
-        } else if (redirect && new_user?.department_id) {
-          router.push("/department_id/" + new_user?.department_id);
         }
+        // TODO: redirect department users to their correct landing page once that route is built
+        // The /department_id/ path does not exist — backend needs to define this route
       }
     }
 
@@ -76,7 +78,7 @@ export function AuthProvider({ children }: prop) {
       set_prisma_user(session.user.id, redirect);
     });
     return () => subscription.unsubscribe();
-  }, []);
+  }, [pathname, router, supabase]);
 
   return (
     <auth_context.Provider value={{ user }}>{children}</auth_context.Provider>
