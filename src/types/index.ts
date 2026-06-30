@@ -25,8 +25,8 @@ export type ContractStatus =
   | "SIGNED"
   | "REJECTED";
 
-export interface UserType {
-  user_id: string,
+export interface ProfileType {
+  profile_id: string,
   first_name: string,
   last_name: string,
   phone: string,
