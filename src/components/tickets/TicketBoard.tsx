@@ -22,7 +22,7 @@ import { TagManager } from "./TagModals";
 
 // Import your custom generated Prisma types and enums
 import { Prisma, status as TicketStatus } from "@/lib/generated/prisma";
-import { selectTicket, ticketUpdateStatus, createTicket, deleteTicket } from "@/actions/ticketActions";
+import { selectTicket, ticketUpdateStatus, createTicket, softDeleteTicket } from "@/actions/ticketActions";
 
 // ── Define the strict Ticket Type using Prisma's payload generator ──────────
 type Ticket = Prisma.TicketsGetPayload<{
@@ -179,7 +179,7 @@ export default function TicketBoard({
         const previousTickets = tickets;
         try {
             setTickets((prev) => prev.filter((t) => t.ticket_id !== ticketId));
-            await deleteTicket(ticketId);
+            await softDeleteTicket(ticketId);
         } catch (error) {
             setTickets(previousTickets);
             console.error("Failed to delete ticket:", error);

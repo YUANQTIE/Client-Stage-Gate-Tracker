@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Prisma } from "@/lib/generated/prisma";
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 import { selectTag } from "@/actions/tagActions";
 import { selectProfile } from "@/actions/profileActions";
@@ -75,6 +76,14 @@ export default function CreateTicketModal({ isOpen, onClose, onCreateTicket }: C
 	const [assignedOpen, setAssignedOpen] = useState(false);
 	const assignedRef = useRef<HTMLDivElement>(null);
 
+	/** Image attachment — not yet passed to onCreateTicket; see TODO in handleSubmit */
+	const [imageFile, setImageFile] = useState<File | null>(null);
+	const [imagePreview, setImagePreview] = useState<string | null>(null);
+
+	/** API fields — only relevant when the "API" tag is selected */
+	const [apiMethod, setApiMethod] = useState('GET');
+	const [apiRoute, setApiRoute] = useState('');
+
 	useEffect(() => {
 		selectProfile().then(setProfiles);
 		selectTag().then(setAvailableTags);
@@ -103,10 +112,28 @@ export default function CreateTicketModal({ isOpen, onClose, onCreateTicket }: C
 		);
 	}
 
+	const isApiTagSelected = tags.some(
+		tagId => availableTags.find(t => t.tag_id === tagId)?.name?.toLowerCase() === 'api'
+	);
+
+	function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+		const file = e.target.files?.[0];
+		if (!file) return;
+		if (file.size > 5 * 1024 * 1024) {
+			alert('Image must be under 5MB.');
+			e.target.value = '';
+			return;
+		}
+		setImageFile(file);
+		setImagePreview(URL.createObjectURL(file));
+	}
+
 	function handleSubmit(e: React.FormEvent) {
 		e.preventDefault();
 		if (!title.trim()) return;
 
+		// TODO: upload imageFile to backend storage before calling onCreateTicket, then pass returned URL
+		// TODO: pass apiMethod and apiRoute to backend when isApiTagSelected is true
 		onCreateTicket(
 			title.trim(),                                 // 1. name (string)
 			deadline ? new Date(deadline) : new Date(),   // 2. deadlineDate (Date - required!)
@@ -121,6 +148,10 @@ export default function CreateTicketModal({ isOpen, onClose, onCreateTicket }: C
 		setWatcherId('');
 		setTags([]);
 		setAssignedIds([]);
+		setImageFile(null);
+		setImagePreview(null);
+		setApiMethod('GET');
+		setApiRoute('');
 		onClose();
 	}
 
@@ -164,9 +195,9 @@ export default function CreateTicketModal({ isOpen, onClose, onCreateTicket }: C
 				<form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
 					{/* Ticket Name */}
 					<div className="space-y-1.5">
-						<label className="text-sm font-medium text-gray-700">
+						<Label>
 							Ticket Name <span className="text-red-500">*</span>
-						</label>
+						</Label>
 						<Input
 							placeholder="e.g., Update Landing Page Hero"
 							value={title}
@@ -181,7 +212,7 @@ export default function CreateTicketModal({ isOpen, onClose, onCreateTicket }: C
 
 					{/* Description */}
 					<div className="space-y-1.5">
-						<label className="text-sm font-medium text-gray-700">Description</label>
+						<Label>Description</Label>
 						<textarea
 							placeholder="Provide detailed information about this ticket..."
 							value={description}
@@ -195,7 +226,7 @@ export default function CreateTicketModal({ isOpen, onClose, onCreateTicket }: C
 					<div className="grid grid-cols-2 gap-4">
 						{/* Assigned To */}
 						<div className="space-y-1.5" ref={assignedRef}>
-							<label className="text-sm font-medium text-gray-700">Assigned To</label>
+							<Label>Assigned To</Label>
 							<div className="relative">
 								<button
 									type="button"
@@ -257,7 +288,7 @@ export default function CreateTicketModal({ isOpen, onClose, onCreateTicket }: C
 
 						{/* Watcher */}
 						<div className="space-y-1.5">
-							<label className="text-sm font-medium text-gray-700">Watcher</label>
+							<Label>Watcher</Label>
 							<div className="relative">
 								<div className="pointer-events-none absolute inset-y-0 left-3 flex items-center">
 									<EyeIcon />
@@ -283,7 +314,7 @@ export default function CreateTicketModal({ isOpen, onClose, onCreateTicket }: C
 					<div className="grid grid-cols-2 gap-4">
 						{/* Tags */}
 						<div className="space-y-1.5" ref={tagsRef}>
-							<label className="text-sm font-medium text-gray-700">Tags</label>
+							<Label>Tags</Label>
 							<div className="relative">
 								<button
 									type="button"
@@ -348,7 +379,7 @@ export default function CreateTicketModal({ isOpen, onClose, onCreateTicket }: C
 
 						{/* Deadline */}
 						<div className="space-y-1.5">
-							<label className="text-sm font-medium text-gray-700">Deadline</label>
+							<Label>Deadline</Label>
 							<Input
 								type="date"
 								value={deadline}
@@ -358,6 +389,68 @@ export default function CreateTicketModal({ isOpen, onClose, onCreateTicket }: C
 							/>
 						</div>
 					</div>
+
+					{/* Image Attachment */}
+					<div className="space-y-1.5">
+						<Label>
+							Attachment{' '}
+							<span className="text-xs text-gray-400 font-normal">(jpg, png · Max 5MB)</span>
+						</Label>
+						<label className="flex items-center gap-2.5 w-full cursor-pointer rounded-lg border border-dashed border-gray-300 bg-gray-50 px-3.5 py-2.5 text-sm text-gray-500 hover:border-indigo-400 hover:bg-indigo-50/40 transition-colors">
+							<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+								<path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+							</svg>
+							<span>{imageFile ? imageFile.name : 'Click to attach an image...'}</span>
+							<input
+								type="file"
+								accept="image/jpeg,image/png"
+								onChange={handleImageChange}
+								className="sr-only"
+							/>
+						</label>
+						{imagePreview && (
+							<div className="relative inline-block mt-1">
+								<img src={imagePreview} alt="Preview" className="h-20 w-auto rounded-lg border border-gray-200 object-cover" />
+								<button
+									type="button"
+									onClick={() => { setImageFile(null); setImagePreview(null); }}
+									className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-gray-700 text-white flex items-center justify-center text-[10px] leading-none hover:bg-red-600 transition-colors"
+								>
+									×
+								</button>
+							</div>
+						)}
+					</div>
+
+					{/* API Details — shown only when the "API" tag is applied */}
+					{isApiTagSelected && (
+						<div className="space-y-3 rounded-lg border border-indigo-100 bg-indigo-50/40 px-4 py-3.5">
+							<p className="text-xs font-semibold text-indigo-600 uppercase tracking-wide">API Details</p>
+							{/* TODO: save apiMethod and apiRoute to ticket record on backend */}
+							<div className="grid grid-cols-[110px_1fr] gap-3 items-end">
+								<div className="space-y-1.5">
+									<Label>Method</Label>
+									<select
+										value={apiMethod}
+										onChange={e => setApiMethod(e.target.value)}
+										className="w-full rounded-lg border border-gray-200 bg-white px-2.5 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+									>
+										{['GET', 'POST', 'PUT', 'DELETE'].map(m => (
+											<option key={m}>{m}</option>
+										))}
+									</select>
+								</div>
+								<div className="space-y-1.5">
+									<Label>API Route</Label>
+									<Input
+										placeholder="/api/v1/resource"
+										value={apiRoute}
+										onChange={e => setApiRoute(e.target.value)}
+									/>
+								</div>
+							</div>
+						</div>
+					)}
 				</form>
 
 				{/* Footer */}
