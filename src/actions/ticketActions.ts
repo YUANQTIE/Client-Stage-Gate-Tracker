@@ -2,12 +2,9 @@
 
 import { prisma } from "@/lib/prisma";
 import {Prisma, status, CommentParentType, ImageParentType } from "@/lib/generated/prisma";
-import {cascadeSoftDeleteWorkflow} from "@/actions/workflowActions";
 
 export type EntityFilterStatus = 'active' | 'deleted' | 'all';
 
-
-export type EntityFilterStatus = 'active' | 'deleted' | 'all';
 
 export async function selectTicket() {
     try {
