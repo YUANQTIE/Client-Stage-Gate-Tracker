@@ -38,3 +38,12 @@ export interface ProfileType {
   is_deleted: boolean,
   deleted_at: Date | null
 }
+
+export interface ClientType{
+  client_id: string,
+  client_name: string,
+  tin: string,
+  billing_address: string,
+  is_deleted: boolean,
+  deleted_at: Date | null
+}
