@@ -1,12 +1,10 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { status as TicketStatus } from "@/lib/generated/prisma";
+import {Prisma, status, CommentParentType, ImageParentType } from "@/lib/generated/prisma";
 
 export type EntityFilterStatus = 'active' | 'deleted' | 'all';
 
-
-export type EntityFilterStatus = 'active' | 'deleted' | 'all';
 
 export async function selectTicket() {
     try {
@@ -60,7 +58,7 @@ export async function createTicket(
     }
 }
 
-export async function ticketUpdateStatus(ticketId: string, status: TicketStatus) {
+export async function ticketUpdateStatus(ticketId: string, status: status) {
     return prisma.tickets.update({
         where: { ticket_id: ticketId },
         data: { status },
@@ -98,7 +96,49 @@ export async function getSubtasksByTicketId(ticketId: string, status: string = '
  * @param {string} ticketId - The UUID of the ticket to soft delete.
  * @returns {Promise<{success: boolean, error?: string}>}
  */
-export async function softDeleteTicket(ticketId: string) {
+export async function cascadeSoftDeleteTicket(ticketId: string, txClient?: Prisma.TransactionClient) {
+
+    // Delete related entries in other tables
+    const executeLogic = async (tx: Prisma.TransactionClient) => {
+
+        // Update ticket status
+        await tx.tickets.update({
+            where: { ticket_id: ticketId },
+            data: { is_deleted: true, deleted_at: new Date() }
+        });
+
+        // Delete comments, images, and other related entries
+        await tx.comments.deleteMany({
+            where: { parent_id: ticketId, parent_type: CommentParentType.TICKET },
+        });
+
+        await tx.images.deleteMany({
+            where: { parent_id: ticketId, parent_type: ImageParentType.TICKET },
+        });
+
+        await tx.historyEvent.deleteMany({
+            where: { ticket_id: ticketId },
+        });
+
+        await tx.ticketAssigned.deleteMany({
+            where: { ticket_id: ticketId },
+        });
+
+        await tx.ticketTags.deleteMany({
+            where: { ticket_id: ticketId },
+        });
+
+        const subtasks = await tx.ticketSubtasks.findMany({
+            where: { ticket_id: ticketId },
+            select: { subtask_id: true }
+        })
+
+        for (const s of subtasks) {
+            await cascadeSoftDeleteTicket(s.subtask_id, tx);
+        }
+
+    };
+
     try {
         await prisma.tickets.update({
             where: {
@@ -108,8 +148,7 @@ export async function softDeleteTicket(ticketId: string) {
                 is_deleted: true,
                 deleted_at: new Date(),
             },
-        });
-
+    });
         return { success: true };
     } catch (error) {
         console.error("Failed to soft delete ticket:", error);

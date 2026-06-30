@@ -22,7 +22,12 @@ import { TagManager } from "./TagModals";
 
 // Import your custom generated Prisma types and enums
 import { Prisma, status as TicketStatus } from "@/lib/generated/prisma";
-import { selectTicket, ticketUpdateStatus, createTicket, softDeleteTicket } from "@/actions/ticketActions";
+import {
+    selectTicket,
+    ticketUpdateStatus,
+    createTicket,
+    cascadeSoftDeleteTicket
+} from "@/actions/ticketActions";
 
 // ── Define the strict Ticket Type using Prisma's payload generator ──────────
 type Ticket = Prisma.TicketsGetPayload<{
@@ -42,8 +47,6 @@ function TagsIcon() {
     </svg>
   );
 }
-
-
 function FilterIcon() {
     return (
         <svg
@@ -60,7 +63,6 @@ function FilterIcon() {
         </svg>
     );
 }
-
 function PlusIcon() {
     return (
         <svg
@@ -108,7 +110,8 @@ export default function TicketBoard({
     });
     const sensors = useSensors(mouseSensor, touchSensor);
 
-    const activeTicket = activeId ? tickets.find((t) => t.ticket_id === activeId) : null;
+    const activeTicket = activeId ? tickets.find((t)=>
+        t.ticket_id === activeId) : null;
 
     useEffect(() => {
         let isMounted = true;
@@ -166,7 +169,8 @@ export default function TicketBoard({
             );
 
             if (result.success && result.data) {
-                setTickets((prev) => [...prev, result.data as Ticket]);
+                setTickets((prev) =>
+                    [...prev, result.data as Ticket]);
                 setModalOpen(false);
             }
         } catch (error) {
@@ -178,8 +182,9 @@ export default function TicketBoard({
     async function handleDeleteTicket(ticketId: string) {
         const previousTickets = tickets;
         try {
-            setTickets((prev) => prev.filter((t) => t.ticket_id !== ticketId));
-            await softDeleteTicket(ticketId);
+            setTickets((prev) =>
+                prev.filter((t) => t.ticket_id !== ticketId));
+            await cascadeSoftDeleteTicket(ticketId);
         } catch (error) {
             setTickets(previousTickets);
             console.error("Failed to delete ticket:", error);
@@ -281,7 +286,8 @@ export default function TicketBoard({
                 <DragOverlay dropAnimation={null}>
                     {activeTicket ? (
                         <div className="rotate-2 opacity-90">
-                            <TicketCardContent ticket={activeTicket} onSelect={() => {}} onEdit={() => {}} onDelete={() => {}} />
+                            <TicketCardContent ticket={activeTicket} onSelect={() => {}} onEdit={() =>
+                            {}} onDelete={() => {}} />
                         </div>
                     ) : null}
                 </DragOverlay>

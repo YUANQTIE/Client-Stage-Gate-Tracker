@@ -32,7 +32,7 @@ export async function createTag(
     }
 }
 
-export async function tagUpdateStatus(id: string, name:string, description?: string, color?: string) {
+export async function tagUpdate(id: string, name:string, description?: string, color?: string) {
     return prisma.tags.update({
         where: { tag_id: id },
         data: {

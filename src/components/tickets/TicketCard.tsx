@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useDraggable } from '@dnd-kit/core';
-import { type Ticket } from "@/actions/ticketActions";
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 
@@ -102,7 +101,7 @@ function DeleteConfirmationModal({ isOpen, onClose, onConfirm, ticketTitle }: De
       >
         <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete Ticket?</h3>
         <p className="text-sm text-gray-500 mb-6">
-          Are you sure you want to delete <span className="font-medium text-gray-700">"{ticketTitle}"</span>? This action cannot be undone.
+          Are you sure you want to delete <span className="font-medium text-gray-700">{ticketTitle}</span>? This action cannot be undone.
         </p>
         <div className="flex items-center justify-end gap-3">
           <button
@@ -124,6 +123,23 @@ function DeleteConfirmationModal({ isOpen, onClose, onConfirm, ticketTitle }: De
 }
 
 // ── Card content (pure presentation, no DnD) ─────────────────────────────────
+
+interface Ticket {
+  ticket_id: string;
+  workflow_id: string;
+  name: string;
+  deadline_date: Date;
+  description?: string | null;
+  start_date?: Date | null;
+  end_date?: Date | null;
+  Users_Tickets_assigner_idToUsers?: User | null;
+  Users_Tickets_watcher_idToUsers?: User | null;
+}
+
+interface User {
+  first_name:string,
+  last_name:string,
+}
 
 interface CardContentProps {
   ticket: Ticket;
