@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Prisma, status as TicketStatus } from "@/lib/generated/prisma";
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 import { selectTag } from "@/actions/tagActions";
 import { selectProfile } from "@/actions/profileActions";
@@ -17,6 +18,15 @@ type Ticket = Prisma.TicketsGetPayload<{
     TicketSubtasks_TicketSubtasks_ticket_idToTickets: true;
   }
 }>;
+
+/** Local comment entry — persisted to backend once wired */
+interface Comment {
+  id: string;
+  text: string;
+  /** Object URL for preview — swap for a real URL once uploaded to storage */
+  imageUrl?: string;
+  timestamp: Date;
+}
 
 const colorClasses = {
   indigo: "bg-indigo-50 text-indigo-700",
@@ -64,6 +74,17 @@ export default function EditTicketModal({ ticket: initialTicket, isOpen, onClose
 
   const [showAssignDropdown, setShowAssignDropdown] = useState(false);
   const assignDropdownRef = useRef<HTMLDivElement>(null);
+
+  /** API fields — new backend columns needed: api_method, api_route on Tickets table */
+  const [apiMethod, setApiMethod] = useState('GET');
+  const [apiRoute, setApiRoute] = useState('');
+
+  /** Comments — local only until backend is wired */
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [commentText, setCommentText] = useState('');
+  const [commentImage, setCommentImage] = useState<File | null>(null);
+  const [commentImagePreview, setCommentImagePreview] = useState<string | null>(null);
+  const commentImageRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     selectProfile().then((data) => setUsers(data as Prisma.ProfilesGetPayload<{}>[]));
@@ -152,6 +173,37 @@ export default function EditTicketModal({ ticket: initialTicket, isOpen, onClose
   const deadlineDisplay = ticket.deadline_date
       ? new Date(ticket.deadline_date).toLocaleDateString()
       : null;
+
+  const isApiTagSelected = selectedTags.some(
+    tagId => availableTags.find(t => t.tag_id === tagId)?.name?.toLowerCase() === 'api'
+  );
+
+  function handleCommentImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Image must be under 5MB.');
+      e.target.value = '';
+      return;
+    }
+    setCommentImage(file);
+    setCommentImagePreview(URL.createObjectURL(file));
+  }
+
+  function handleAddComment() {
+    if (!commentText.trim() && !commentImage) return;
+    // TODO: POST comment to backend; upload commentImage to storage and link URL to comment record
+    setComments(prev => [...prev, {
+      id: Date.now().toString(),
+      text: commentText.trim(),
+      imageUrl: commentImagePreview ?? undefined,
+      timestamp: new Date(),
+    }]);
+    setCommentText('');
+    setCommentImage(null);
+    setCommentImagePreview(null);
+    if (commentImageRef.current) commentImageRef.current.value = '';
+  }
 
   return (
       <>
@@ -386,6 +438,34 @@ export default function EditTicketModal({ ticket: initialTicket, isOpen, onClose
                     </div>
                 )}
               </div>
+
+              {/* API Details — visible only when the "API" tag is applied */}
+              {isApiTagSelected && (
+                <div className="col-span-2 space-y-2">
+                  <p className="text-xs text-gray-400 font-medium">API Details</p>
+                  {/* TODO: save apiMethod and apiRoute fields to ticket record on backend */}
+                  {apiMethod && apiRoute && (
+                    <div className="inline-flex items-center gap-1.5 bg-gray-900 rounded-md px-2.5 py-1.5">
+                      <span className="text-xs font-mono text-green-400 font-bold">{apiMethod}</span>
+                      <span className="text-xs font-mono text-indigo-300">{apiRoute}</span>
+                    </div>
+                  )}
+                  <div className="grid grid-cols-[110px_1fr] gap-3">
+                    <select
+                      value={apiMethod}
+                      onChange={e => setApiMethod(e.target.value)}
+                      className="w-full rounded-lg border border-gray-200 bg-white px-2.5 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    >
+                      {['GET', 'POST', 'PUT', 'DELETE'].map(m => <option key={m}>{m}</option>)}
+                    </select>
+                    <Input
+                      placeholder="/api/v1/resource"
+                      value={apiRoute}
+                      onChange={e => setApiRoute(e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Description */}
@@ -425,6 +505,99 @@ export default function EditTicketModal({ ticket: initialTicket, isOpen, onClose
               )}
             </div>
             <div className="h-4" />
+
+            {/* Comments */}
+            <div className="px-5 pb-5">
+              <h3 className="text-sm font-semibold text-gray-900 mb-3">Comments</h3>
+
+              {/* Posted comments */}
+              {comments.length > 0 && (
+                <div className="space-y-3 mb-4">
+                  {comments.map(comment => (
+                    <div key={comment.id} className="flex gap-2.5">
+                      <div className="w-7 h-7 rounded-full bg-indigo-500 flex items-center justify-center text-[10px] font-bold text-white shrink-0 mt-0.5">
+                        {/* TODO: replace with current user's initials from auth context */}
+                        U
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="bg-gray-50 rounded-lg px-3 py-2.5">
+                          {comment.imageUrl && (
+                            <img
+                              src={comment.imageUrl}
+                              alt="attachment"
+                              className="max-h-40 rounded-md mb-2 object-contain"
+                            />
+                          )}
+                          {comment.text && (
+                            <p className="text-sm text-gray-700 leading-relaxed">{comment.text}</p>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-400 mt-1">
+                          {comment.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Comment input */}
+              <div className="border border-gray-200 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-transparent transition-shadow">
+                {commentImagePreview && (
+                  <div className="px-3 pt-2.5 pb-0">
+                    <div className="relative inline-block">
+                      <img
+                        src={commentImagePreview}
+                        alt="Preview"
+                        className="h-16 w-auto rounded-md border border-gray-200 object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCommentImage(null);
+                          setCommentImagePreview(null);
+                          if (commentImageRef.current) commentImageRef.current.value = '';
+                        }}
+                        className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-gray-700 text-white flex items-center justify-center text-[10px] leading-none hover:bg-red-600 transition-colors"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </div>
+                )}
+                <textarea
+                  value={commentText}
+                  onChange={e => setCommentText(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) handleAddComment(); }}
+                  placeholder="Add a comment... (Ctrl+Enter to post)"
+                  rows={2}
+                  className="w-full px-3 py-2.5 text-sm text-gray-700 placeholder:text-gray-400 focus:outline-none resize-none bg-transparent"
+                />
+                <div className="flex items-center justify-between px-3 py-2 border-t border-gray-100 bg-gray-50/50">
+                  <label className="cursor-pointer text-gray-400 hover:text-indigo-500 transition-colors" title="Attach image (jpg, png · Max 5MB)">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+                    </svg>
+                    {/* TODO: upload commentImage to backend storage, link returned URL to comment record */}
+                    <input
+                      ref={commentImageRef}
+                      type="file"
+                      accept="image/jpeg,image/png"
+                      onChange={handleCommentImageChange}
+                      className="sr-only"
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleAddComment}
+                    disabled={!commentText.trim() && !commentImage}
+                    className="text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed px-3 py-1.5 rounded-md transition-colors"
+                  >
+                    Comment
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Footer save button */}

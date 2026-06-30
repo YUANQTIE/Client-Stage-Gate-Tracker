@@ -74,7 +74,9 @@ export function AuthProvider({ children }: prop) {
         setUser(null);
         return;
       }
-      const redirect = _event == "SIGNED_IN";
+      
+      const onAuthPage = pathname === '/login' || pathname === '/signup' || pathname === '/client-signup' || pathname === '/';
+      const redirect = _event == "SIGNED_IN" && onAuthPage;
       set_prisma_user(session.user.id, redirect);
     });
     return () => subscription.unsubscribe();
