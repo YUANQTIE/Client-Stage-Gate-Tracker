@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { Prisma, status as TicketStatus } from "@/lib/generated/prisma";
+import { status as TicketStatus } from "@/lib/generated/prisma";
 
 export type EntityFilterStatus = 'active' | 'deleted' | 'all';
 
@@ -95,7 +95,7 @@ export async function getSubtasksByTicketId(ticketId: string, status: string = '
  * @param {string} ticketId - The UUID of the ticket to soft delete.
  * @returns {Promise<{success: boolean, error?: string}>}
  */
-export async function deleteTicket(ticketId: string) {
+export async function softDeleteTicket(ticketId: string) {
     try {
         await prisma.tickets.update({
             where: {
