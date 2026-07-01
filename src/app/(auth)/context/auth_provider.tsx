@@ -89,12 +89,7 @@ export function AuthProvider({ children }: prop) {
         pathname === "/client-signup" ||
         pathname === "/";
 
-      const emailConfirmation =
-        _event === "SIGNED_IN" &&
-        new URLSearchParams(window.location.search).has("code");
-
-      const redirect =
-        _event == "SIGNED_IN" && onAuthPage && !emailConfirmation;
+      const redirect = _event == "SIGNED_IN" && onAuthPage;
       set_prisma_user(session.user.id, redirect);
     });
     return () => subscription.unsubscribe();

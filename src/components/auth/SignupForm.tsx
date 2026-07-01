@@ -39,7 +39,7 @@ export function SignupForm() {
           is_deleted: user.is_deleted,
           deleted_at: user.deleted_at,
         },
-        emailRedirectTo: "http://localhost:3000/auth/signup-callback",
+        emailRedirectTo: "http://localhost:3000/signup-callback",
       },
     });
   }
