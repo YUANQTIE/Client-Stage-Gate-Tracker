@@ -111,7 +111,7 @@ export function ClientSignupForm() {
           is_deleted: user.is_deleted,
           deleted_at: user.deleted_at,
         },
-        emailRedirectTo: "http://localhost:3000/login",
+        emailRedirectTo: "http://localhost:3000/auth/signup-callback",
       },
     });
   }
