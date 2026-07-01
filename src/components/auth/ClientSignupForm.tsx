@@ -1,151 +1,248 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Button } from '@/components/ui/button'
-import { PasswordInput } from '@/components/auth/PasswordInput'
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { PasswordInput } from "@/components/auth/PasswordInput";
+import { ClientType, ProfileType } from "@/types";
+import { createClient } from "@/lib/supabase/client";
+import {
+  clientSelectByNameTin,
+  clientCreate,
+  clientDeleteByID,
+} from "@/actions/clientActions";
 
 type Fields = {
   // TODO: confirm these map to User.firstName and User.lastName on the backend
   // (per Byron's data model: User → Client → Contract)
-  firstName: string
-  lastName: string
-  companyName: string
-  email: string
-  password: string
-  confirmPassword: string
-  streetNumber: string
-  streetName: string
-  city: string
-  country: string
-  tin: string
-  phone: string
-}
+  firstName: string;
+  lastName: string;
+  companyName: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+  streetNumber: string;
+  streetName: string;
+  city: string;
+  country: string;
+  tin: string;
+  phone: string;
+};
 
-type Errors = Partial<Record<keyof Fields, string>>
+type Errors = Partial<Record<keyof Fields, string>>;
 
 export function ClientSignupForm() {
-  const router = useRouter()
+  const router = useRouter();
+  const supabase = createClient();
 
   const [fields, setFields] = useState<Fields>({
-    firstName: '',
-    lastName: '',
-    companyName: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    streetNumber: '',
-    streetName: '',
-    city: '',
-    country: '',
-    tin: '',
-    phone: '',
-  })
+    firstName: "",
+    lastName: "",
+    companyName: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    streetNumber: "",
+    streetName: "",
+    city: "",
+    country: "",
+    tin: "",
+    phone: "",
+  });
 
-  const [errors, setErrors] = useState<Errors>({})
-  const [apiError, setApiError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [errors, setErrors] = useState<Errors>({});
+  const [apiError, setApiError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   function set(key: keyof Fields) {
     return (e: React.ChangeEvent<HTMLInputElement>) => {
-      setFields((prev) => ({ ...prev, [key]: e.target.value }))
-      if (errors[key]) setErrors((prev) => ({ ...prev, [key]: undefined }))
-    }
+      setFields((prev) => ({ ...prev, [key]: e.target.value }));
+      if (errors[key]) setErrors((prev) => ({ ...prev, [key]: undefined }));
+    };
   }
 
   function setNumeric(key: keyof Fields) {
     return (e: React.ChangeEvent<HTMLInputElement>) => {
-      const digits = e.target.value.replace(/\D/g, '')
-      setFields((prev) => ({ ...prev, [key]: digits }))
-      if (errors[key]) setErrors((prev) => ({ ...prev, [key]: undefined }))
-    }
+      const digits = e.target.value.replace(/\D/g, "");
+      setFields((prev) => ({ ...prev, [key]: digits }));
+      if (errors[key]) setErrors((prev) => ({ ...prev, [key]: undefined }));
+    };
   }
 
   function validate(): Errors {
-    const e: Errors = {}
-    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fields.email)
+    const e: Errors = {};
+    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fields.email);
 
-    if (!fields.firstName.trim()) e.firstName = 'First name is required.'
-    if (!fields.lastName.trim()) e.lastName = 'Last name is required.'
-    if (!fields.companyName.trim()) e.companyName = 'Company name is required.'
-    if (!fields.email) e.email = 'Email address is required.'
-    else if (!emailOk) e.email = 'Enter a valid email address.'
-    if (!fields.password) e.password = 'Password is required.'
-    if (!fields.confirmPassword) e.confirmPassword = 'Please confirm your password.'
+    if (!fields.firstName.trim()) e.firstName = "First name is required.";
+    if (!fields.lastName.trim()) e.lastName = "Last name is required.";
+    if (!fields.companyName.trim()) e.companyName = "Company name is required.";
+    if (!fields.email) e.email = "Email address is required.";
+    else if (!emailOk) e.email = "Enter a valid email address.";
+    if (!fields.password) e.password = "Password is required.";
+    if (!fields.confirmPassword)
+      e.confirmPassword = "Please confirm your password.";
     else if (fields.password && fields.password !== fields.confirmPassword)
-      e.confirmPassword = 'Passwords do not match.'
-    if (!fields.streetNumber.trim()) e.streetNumber = 'Required.'
-    if (!fields.streetName.trim()) e.streetName = 'Street name is required.'
-    if (!fields.city.trim()) e.city = 'City is required.'
-    if (!fields.country.trim()) e.country = 'Country is required.'
-    if (!fields.tin) e.tin = 'TIN is required.'
-    if (!fields.phone) e.phone = 'Phone number is required.'
+      e.confirmPassword = "Passwords do not match.";
+    if (!fields.streetNumber.trim()) e.streetNumber = "Required.";
+    if (!fields.streetName.trim()) e.streetName = "Street name is required.";
+    if (!fields.city.trim()) e.city = "City is required.";
+    if (!fields.country.trim()) e.country = "Country is required.";
+    if (!fields.tin) e.tin = "TIN is required.";
+    if (!fields.phone) e.phone = "Phone number is required.";
 
-    return e
+    return e;
   }
 
-  async function handleSubmit(e: React.BaseSyntheticEvent) {
-    e.preventDefault()
-    setApiError(null)
-    const errs = validate()
+  async function userSignUp(user: ProfileType, password: string) {
+    return await supabase.auth.signUp({
+      email: user.email,
+      password: password,
+      options: {
+        data: {
+          first_name: user.first_name,
+          last_name: user.last_name,
+          job_title: user.job_title,
+          client_id: user.client_id,
+          department_id: user.department_id,
+          phone: user.phone,
+          is_deleted: user.is_deleted,
+          deleted_at: user.deleted_at,
+        },
+        emailRedirectTo: "http://localhost:3000/login",
+      },
+    });
+  }
+
+  const handleSignUp = async (e: React.BaseSyntheticEvent) => {
+    setLoading(false);
+    e.preventDefault();
+    setApiError(null);
+    const errs = validate();
     if (Object.keys(errs).length > 0) {
-      setErrors(errs)
-      return
+      setErrors(errs);
+      return;
     }
-    setLoading(true)
-    try {
-      // TODO: connect to backend
-      // Available fields:
-      //   fields.firstName, fields.lastName, fields.companyName, fields.email, fields.password
-      //   fields.streetNumber, fields.streetName, fields.city, fields.country
-      //   fields.tin, fields.phone
-      //
-      // On API error: call setApiError('Your error message here') and return
-      router.push('/login')
-    } catch {
-      setApiError('Something went wrong. Please try again.')
-    } finally {
-      setLoading(false)
+
+    setLoading(true);
+
+    //check if client exists
+    let client = await clientSelectByNameTin(fields.companyName, fields.tin);
+
+    //if client doesn't exist, we insert them into our database
+    if (!client) {
+      try {
+        const address =
+          fields.streetNumber.trim() +
+          " " +
+          fields.streetName.trim() +
+          ", " +
+          fields.city.trim() +
+          ", " +
+          fields.country.trim();
+
+        const new_client: ClientType = {
+          client_id: "",
+          client_name: fields.companyName.trim(),
+          tin: fields.tin.trim(),
+          billing_address: address,
+          is_deleted: false,
+          deleted_at: null,
+        };
+
+        client = await clientCreate(new_client);
+
+        //error check
+        if (!client) {
+          setApiError("Unable to save company data");
+          return;
+        }
+      } catch (error: any) {
+        setApiError(error);
+        if (client) await clientDeleteByID(client.client_id);
+        return;
+      }
     }
-  }
+
+    //create new profile
+    const user: ProfileType = {
+      profile_id: "",
+      first_name: fields.firstName.trim(),
+      last_name: fields.lastName.trim(),
+      phone: fields.phone.trim(),
+      image_id: null,
+      client_id: client?.client_id,
+      department_id: null,
+      email: fields.email.trim(),
+      job_title: null,
+      is_deleted: false,
+      deleted_at: null,
+    };
+
+    const { data, error: signUpError } = await userSignUp(
+      user,
+      fields.password,
+    );
+
+    //catch the sign in error
+    if (signUpError) {
+      setApiError(signUpError.message);
+      if (client) await clientDeleteByID(client.client_id);
+      setLoading(false);
+      return;
+    }
+
+    //only triggers if CONFIRM EMAIL option in Supabase is off (shud be on by default tho)
+    if (data.session) {
+      router.push("/login");
+      router.refresh();
+    } else {
+      setApiError(
+        "Account created! Check your email to confirm your account before logging in.",
+      );
+      setLoading(false);
+    }
+  };
 
   function errClass(key: keyof Fields) {
-    return errors[key] ? 'border-red-400 focus:ring-red-400' : ''
+    return errors[key] ? "border-red-400 focus:ring-red-400" : "";
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-
+    <form onSubmit={handleSignUp} className="space-y-4" noValidate>
       {/* First Name + Last Name */}
       <div className="flex gap-3">
         <div className="flex-1 min-w-0">
-          <Label htmlFor="firstName" className="mb-1.5">First Name</Label>
+          <Label htmlFor="firstName" className="mb-1.5">
+            First Name
+          </Label>
           <Input
             id="firstName"
             name="firstName"
             type="text"
             placeholder="Jane"
             value={fields.firstName}
-            onChange={set('firstName')}
-            className={errClass('firstName')}
+            onChange={set("firstName")}
+            className={errClass("firstName")}
           />
           {errors.firstName && (
             <p className="text-xs text-red-500 mt-1">{errors.firstName}</p>
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <Label htmlFor="lastName" className="mb-1.5">Last Name</Label>
+          <Label htmlFor="lastName" className="mb-1.5">
+            Last Name
+          </Label>
           <Input
             id="lastName"
             name="lastName"
             type="text"
             placeholder="Smith"
             value={fields.lastName}
-            onChange={set('lastName')}
-            className={errClass('lastName')}
+            onChange={set("lastName")}
+            className={errClass("lastName")}
           />
           {errors.lastName && (
             <p className="text-xs text-red-500 mt-1">{errors.lastName}</p>
@@ -155,15 +252,17 @@ export function ClientSignupForm() {
 
       {/* Company Name */}
       <div>
-        <Label htmlFor="companyName" className="mb-1.5">Company Name</Label>
+        <Label htmlFor="companyName" className="mb-1.5">
+          Company Name
+        </Label>
         <Input
           id="companyName"
           name="companyName"
           type="text"
           placeholder="Acme Corporation"
           value={fields.companyName}
-          onChange={set('companyName')}
-          className={errClass('companyName')}
+          onChange={set("companyName")}
+          className={errClass("companyName")}
         />
         {errors.companyName && (
           <p className="text-xs text-red-500 mt-1">{errors.companyName}</p>
@@ -172,15 +271,17 @@ export function ClientSignupForm() {
 
       {/* Email */}
       <div>
-        <Label htmlFor="email" className="mb-1.5">Email Address</Label>
+        <Label htmlFor="email" className="mb-1.5">
+          Email Address
+        </Label>
         <Input
           id="email"
           name="email"
           type="email"
           placeholder="you@company.com"
           value={fields.email}
-          onChange={set('email')}
-          className={errClass('email')}
+          onChange={set("email")}
+          className={errClass("email")}
         />
         {errors.email && (
           <p className="text-xs text-red-500 mt-1">{errors.email}</p>
@@ -189,14 +290,16 @@ export function ClientSignupForm() {
 
       {/* Password */}
       <div>
-        <Label htmlFor="password" className="mb-1.5">Password</Label>
+        <Label htmlFor="password" className="mb-1.5">
+          Password
+        </Label>
         <PasswordInput
           id="password"
           name="password"
           placeholder="Create a password"
           value={fields.password}
-          onChange={set('password')}
-          className={errClass('password')}
+          onChange={set("password")}
+          className={errClass("password")}
         />
         {errors.password && (
           <p className="text-xs text-red-500 mt-1">{errors.password}</p>
@@ -205,14 +308,16 @@ export function ClientSignupForm() {
 
       {/* Confirm Password */}
       <div>
-        <Label htmlFor="confirmPassword" className="mb-1.5">Confirm Password</Label>
+        <Label htmlFor="confirmPassword" className="mb-1.5">
+          Confirm Password
+        </Label>
         <PasswordInput
           id="confirmPassword"
           name="confirmPassword"
           placeholder="Confirm your password"
           value={fields.confirmPassword}
-          onChange={set('confirmPassword')}
-          className={errClass('confirmPassword')}
+          onChange={set("confirmPassword")}
+          className={errClass("confirmPassword")}
         />
         {errors.confirmPassword && (
           <p className="text-xs text-red-500 mt-1">{errors.confirmPassword}</p>
@@ -228,30 +333,34 @@ export function ClientSignupForm() {
         {/* Street Number + Street Name */}
         <div className="flex gap-3 mb-3">
           <div className="w-[30%] shrink-0">
-            <Label htmlFor="streetNumber" className="mb-1.5">Street No.</Label>
+            <Label htmlFor="streetNumber" className="mb-1.5">
+              Street No.
+            </Label>
             <Input
               id="streetNumber"
               name="streetNumber"
               type="text"
               placeholder="123"
               value={fields.streetNumber}
-              onChange={set('streetNumber')}
-              className={errClass('streetNumber')}
+              onChange={set("streetNumber")}
+              className={errClass("streetNumber")}
             />
             {errors.streetNumber && (
               <p className="text-xs text-red-500 mt-1">{errors.streetNumber}</p>
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <Label htmlFor="streetName" className="mb-1.5">Street Name</Label>
+            <Label htmlFor="streetName" className="mb-1.5">
+              Street Name
+            </Label>
             <Input
               id="streetName"
               name="streetName"
               type="text"
               placeholder="Main Street"
               value={fields.streetName}
-              onChange={set('streetName')}
-              className={errClass('streetName')}
+              onChange={set("streetName")}
+              className={errClass("streetName")}
             />
             {errors.streetName && (
               <p className="text-xs text-red-500 mt-1">{errors.streetName}</p>
@@ -262,30 +371,34 @@ export function ClientSignupForm() {
         {/* City + Country */}
         <div className="flex gap-3">
           <div className="flex-1 min-w-0">
-            <Label htmlFor="city" className="mb-1.5">City</Label>
+            <Label htmlFor="city" className="mb-1.5">
+              City
+            </Label>
             <Input
               id="city"
               name="city"
               type="text"
               placeholder="New York"
               value={fields.city}
-              onChange={set('city')}
-              className={errClass('city')}
+              onChange={set("city")}
+              className={errClass("city")}
             />
             {errors.city && (
               <p className="text-xs text-red-500 mt-1">{errors.city}</p>
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <Label htmlFor="country" className="mb-1.5">Country</Label>
+            <Label htmlFor="country" className="mb-1.5">
+              Country
+            </Label>
             <Input
               id="country"
               name="country"
               type="text"
               placeholder="United States"
               value={fields.country}
-              onChange={set('country')}
-              className={errClass('country')}
+              onChange={set("country")}
+              className={errClass("country")}
             />
             {errors.country && (
               <p className="text-xs text-red-500 mt-1">{errors.country}</p>
@@ -296,7 +409,9 @@ export function ClientSignupForm() {
 
       {/* TIN */}
       <div>
-        <Label htmlFor="tin" className="mb-1.5">TIN (Tax Identification Number)</Label>
+        <Label htmlFor="tin" className="mb-1.5">
+          TIN (Tax Identification Number)
+        </Label>
         <Input
           id="tin"
           name="tin"
@@ -304,8 +419,8 @@ export function ClientSignupForm() {
           inputMode="numeric"
           placeholder="000000000"
           value={fields.tin}
-          onChange={setNumeric('tin')}
-          className={errClass('tin')}
+          onChange={setNumeric("tin")}
+          className={errClass("tin")}
         />
         {errors.tin && (
           <p className="text-xs text-red-500 mt-1">{errors.tin}</p>
@@ -314,7 +429,9 @@ export function ClientSignupForm() {
 
       {/* Phone Number */}
       <div>
-        <Label htmlFor="phone" className="mb-1.5">Phone Number</Label>
+        <Label htmlFor="phone" className="mb-1.5">
+          Phone Number
+        </Label>
         <Input
           id="phone"
           name="phone"
@@ -322,8 +439,8 @@ export function ClientSignupForm() {
           inputMode="numeric"
           placeholder="12025550100"
           value={fields.phone}
-          onChange={setNumeric('phone')}
-          className={errClass('phone')}
+          onChange={setNumeric("phone")}
+          className={errClass("phone")}
         />
         {errors.phone && (
           <p className="text-xs text-red-500 mt-1">{errors.phone}</p>
@@ -337,7 +454,7 @@ export function ClientSignupForm() {
       )}
 
       <Button type="submit" className="mt-2" disabled={loading}>
-        {loading ? 'Creating account...' : 'Sign Up'}
+        {loading ? "Creating account..." : "Sign Up"}
       </Button>
 
       {/* OR divider */}
@@ -351,7 +468,7 @@ export function ClientSignupForm() {
       </div>
 
       <p className="text-center text-sm text-gray-500">
-        Already have an account?{' '}
+        Already have an account?{" "}
         <Link
           href="/login"
           className="text-indigo-600 hover:text-indigo-500 transition-colors"
@@ -359,7 +476,6 @@ export function ClientSignupForm() {
           Sign in
         </Link>
       </p>
-
     </form>
-  )
+  );
 }

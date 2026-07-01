@@ -55,9 +55,17 @@ export function AuthProvider({ children }: prop) {
 
         setUser(new_user);
 
-        const onAuthPage = pathname === '/login' || pathname === '/signup' || pathname === '/client-signup' || pathname === '/';
+        const onAuthPage =
+          pathname === "/login" ||
+          pathname === "/signup" ||
+          pathname === "/client-signup" ||
+          pathname === "/";
+
+        //TO-DO: Fix path later
         if (redirect && onAuthPage && new_user?.client_id) {
           router.push("/client/" + new_user?.client_id);
+        } else if (redirect && onAuthPage && new_user?.department_id) {
+          router.push("/department_id/" + new_user?.department_id);
         }
         // TODO: redirect department users to their correct landing page once that route is built
         // The /department_id/ path does not exist — backend needs to define this route
@@ -74,9 +82,19 @@ export function AuthProvider({ children }: prop) {
         setUser(null);
         return;
       }
-      
-      const onAuthPage = pathname === '/login' || pathname === '/signup' || pathname === '/client-signup' || pathname === '/';
-      const redirect = _event == "SIGNED_IN" && onAuthPage;
+
+      const onAuthPage =
+        pathname === "/login" ||
+        pathname === "/signup" ||
+        pathname === "/client-signup" ||
+        pathname === "/";
+
+      const emailConfirmation =
+        _event === "SIGNED_IN" &&
+        new URLSearchParams(window.location.search).has("code");
+
+      const redirect =
+        _event == "SIGNED_IN" && onAuthPage && !emailConfirmation;
       set_prisma_user(session.user.id, redirect);
     });
     return () => subscription.unsubscribe();
