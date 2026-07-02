@@ -201,7 +201,7 @@ export function ModulesCard({ activePhase, phases, setPhases }: ModulesCardProps
 
                   <div className="flex items-center gap-2">
                     {/* Role avatars */}
-                    <div className="flex items-center -space-x-1">
+                    {/* <div className="flex items-center -space-x-1">
                       {module.roles.slice(0, 3).map((role, idx) => (
                         <div
                           key={idx}
@@ -220,7 +220,7 @@ export function ModulesCard({ activePhase, phases, setPhases }: ModulesCardProps
                           </span>
                         </div>
                       )}
-                    </div>
+                    </div> */}
 
                     <div className="w-px h-4 bg-[#C7C4D8] mx-2" />
 
@@ -296,12 +296,12 @@ export function ModulesCard({ activePhase, phases, setPhases }: ModulesCardProps
                   type="text"
                   value={moduleFormData.description}
                   onChange={(e) => setModuleFormData({ ...moduleFormData, description: e.target.value })}
-                  placeholder="e.g., SSO, JWT, User Roles"
+                  placeholder="e.g., Implementation of security features"
                   className="w-full px-3 py-2 bg-white border border-[#CBD5E1] rounded-lg text-sm text-[#0F172A] focus:outline-none focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5] transition-all"
                 />
               </div>
 
-              <div>
+              {/* <div>
                 <label className="block text-xs font-semibold text-[#475569] mb-1.5">
                   Roles (comma-separated)
                 </label>
@@ -315,7 +315,7 @@ export function ModulesCard({ activePhase, phases, setPhases }: ModulesCardProps
                 <p className="text-xs text-[#94A3B8] mt-1.5">
                   Separate roles with commas
                 </p>
-              </div>
+              </div> */}
             </div>
 
             <div className="flex justify-between items-center mt-6 pt-4 border-t border-[#F1F5F9]">

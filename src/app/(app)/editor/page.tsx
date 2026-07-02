@@ -41,7 +41,7 @@ const defaultPhases: Phase[] = [
       {
         id: "1",
         name: "Authentication & Identity",
-        description: "SSO, JWT, User Roles",
+        description: "Implementation of Security Features",
         roles: ["Frontend", "Backend", "DevOps"],
         workflows: [
           {
@@ -71,7 +71,7 @@ const defaultPhases: Phase[] = [
       {
         id: "1",
         name: "Authentication & Identity",
-        description: "SSO, JWT, User Roles",
+        description: "Implementation of Security Features",
         roles: ["Frontend", "Backend", "DevOps"],
         workflows: [
           {
