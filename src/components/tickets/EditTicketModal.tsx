@@ -1,23 +1,14 @@
 'use client';
 
+import { Ticket, Profile, Tag, TicketAssigned } from './types';
+
 import { useState, useRef, useEffect } from 'react';
 import { Prisma, status as TicketStatus } from "@/lib/generated/prisma";
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 
 import { selectTag } from "@/actions/tagActions";
 import { selectProfile } from "@/actions/profileActions";
-import { ticketUpdateStatus } from "@/actions/ticketActions";
-
-// ── Define the strict Ticket Type using Prisma's payload generator ──────────
-// ── Manual TypeScript definition for your application's unified Ticket interface ──
-type Ticket = Prisma.TicketsGetPayload<{
-  include: {
-    TicketTags: true;
-    TicketAssigned: true;
-    TicketSubtasks_TicketSubtasks_ticket_idToTickets: true;
-  }
-}>;
+import { updateTicket } from "@/actions/ticketActions";
 
 /** Local comment entry — persisted to backend once wired */
 interface Comment {
@@ -50,16 +41,17 @@ function statusLabel(status: TicketStatus) {
   return map[status];
 }
 
+type EditingField = 'title' | 'assignee' | 'watcher' | 'deadline' | 'tags' | 'description' | 'status' | null;
+
 interface EditTicketModalProps {
   ticket: Ticket | null;
   isOpen: boolean;
   onClose: () => void;
   onUpdate: (updated: Ticket) => void;
+  tags: Tag[];
 }
 
-type EditingField = 'title' | 'assignee' | 'watcher' | 'deadline' | 'tags' | 'description' | 'status' | null;
-
-export default function EditTicketModal({ ticket: initialTicket, isOpen, onClose, onUpdate }: EditTicketModalProps) {
+export default function EditTicketModal({ ticket: initialTicket, isOpen, onClose, onUpdate, tags }: EditTicketModalProps) {
   const [ticket, setTicket] = useState<Ticket | null>(initialTicket);
   const [editing, setEditing] = useState<EditingField>(null);
   const [titleDraft, setTitleDraft] = useState('');
@@ -68,8 +60,7 @@ export default function EditTicketModal({ ticket: initialTicket, isOpen, onClose
   const titleRef = useRef<HTMLInputElement>(null);
   const descRef = useRef<HTMLTextAreaElement>(null);
 
-  const [users, setUsers] = useState<Prisma.ProfilesGetPayload<{}>[]>([]);
-  const [availableTags, setAvailableTags] = useState<Prisma.TagsGetPayload<{}>[]>([]);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
   const [showAssignDropdown, setShowAssignDropdown] = useState(false);
@@ -87,8 +78,7 @@ export default function EditTicketModal({ ticket: initialTicket, isOpen, onClose
   const commentImageRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    selectProfile().then((data) => setUsers(data as Prisma.ProfilesGetPayload<{}>[]));
-    selectTag().then((data) => setAvailableTags(data as Prisma.TagsGetPayload<{}>[]));
+    selectProfile().then((data) => setProfiles(data as Profile[]));
   }, []);
 
   useEffect(() => {
@@ -102,10 +92,25 @@ export default function EditTicketModal({ ticket: initialTicket, isOpen, onClose
   }, []);
 
   useEffect(() => {
-    setTicket(initialTicket);
-    setEditing(null);
-    setSelectedTags(initialTicket?.TicketTags?.map(t => t.tag_id) ?? []);
+    let isMounted = true;
+
+    if (isMounted) {
+      selectTag()
+          .then((data) => {
+            if (isMounted) {
+              setTicket(initialTicket);
+              setEditing(null);
+              setSelectedTags(initialTicket?.TicketTags?.map(t => t.tag_id) ?? []);
+            }
+          })
+          .catch((err) => console.error("Failed to fetch tags:", err));
+    }
+
+    return () => {
+      isMounted = false; // Prevents updating state if component unmounts mid-fetch
+    };
   }, [initialTicket]);
+
 
   useEffect(() => {
     if (editing === 'title') titleRef.current?.focus();
@@ -114,7 +119,7 @@ export default function EditTicketModal({ ticket: initialTicket, isOpen, onClose
 
   if (!ticket) return null;
 
-  const availableUsers = users.filter(
+  const availableProfiles = profiles.filter(
       user => !ticket.TicketAssigned.some(a => a.profile_id === user.profile_id)
   );
 
@@ -163,19 +168,33 @@ export default function EditTicketModal({ ticket: initialTicket, isOpen, onClose
   async function handleSave() {
     if (!ticket) return;
     // Persist status updates to database through your server action
-    const updated = await ticketUpdateStatus(ticket.ticket_id, ticket.status);
+    const updated = await updateTicket(
+        {
+          ticket_id: ticket.ticket_id,
+          workflow_id: ticket.workflow_id,
+          name: ticket.name,
+          deadline_date:ticket.deadline_date,
+          status:ticket.status, // Renamed locally to avoid conflict with the 'status' type name
+          watcher_id:ticket.watcher_id,
+          TicketAssigned:ticket.TicketAssigned.map(assignment => assignment.profile_id),
+          tagIds:selectedTags,             // Clean string array from frontend tag selector
+          description:ticket.description,
+          start_date:ticket.start_date,
+          end_date:ticket.end_date
+        }
+    );
     onUpdate(updated as unknown as Ticket);
     onClose();
   }
 
-  const watcher        = users.find(u => u.profile_id === ticket.watcher_id);
+  const watcher        = profiles.find(u => u.profile_id === ticket.watcher_id);
   const isOverdue      = ticket.deadline_date && new Date(ticket.deadline_date) < new Date();
   const deadlineDisplay = ticket.deadline_date
       ? new Date(ticket.deadline_date).toLocaleDateString()
       : null;
 
   const isApiTagSelected = selectedTags.some(
-    tagId => availableTags.find(t => t.tag_id === tagId)?.name?.toLowerCase() === 'api'
+    tagId => tags.find(t => t.tag_id === tagId)?.name?.toLowerCase() === 'api'
   );
 
   function handleCommentImageChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -270,12 +289,12 @@ export default function EditTicketModal({ ticket: initialTicket, isOpen, onClose
                 <p className="text-xs text-gray-400 font-medium mb-1.5">Assigned To</p>
                 {ticket.TicketAssigned && ticket.TicketAssigned.length > 0 ? (
                     <div className="flex flex-col gap-1.5">
-                      {ticket.TicketAssigned.map((a: any) => (
-                          <div key={a.user_id} className="flex items-center gap-2 group">
+                      {ticket.TicketAssigned.map((a) => (
+                          <div key={a.profile_id} className="flex items-center gap-2 group">
                             <div className="w-7 h-7 rounded-full bg-indigo-500 flex items-center justify-center text-[10px] font-bold text-white shrink-0">
-                              {(`${a.Users?.first_name ?? 'U'} ${a.Users?.last_name ?? ''}`).trim().split(' ').map((n: string) => n[0]).join('')}
+                              {(`${a.Profiles?.first_name ?? 'U'} ${a.Profiles?.last_name ?? ''}`).trim().split(' ').map((n: string) => n[0]).join('')}
                             </div>
-                            <span className="text-sm text-gray-700 font-medium flex-1">{`${a.Users?.first_name ?? 'Unknown'} ${a.Users?.last_name ?? 'User'}`}</span>
+                            <span className="text-sm text-gray-700 font-medium flex-1">{`${a.Profiles?.first_name ?? 'Unknown'} ${a.Profiles?.last_name ?? 'User'}`}</span>
                             <button
                                 onClick={() => setTicket(t => t ? {
                                   ...t,
@@ -293,7 +312,7 @@ export default function EditTicketModal({ ticket: initialTicket, isOpen, onClose
                 )}
 
                 {/* Add Assignee */}
-                {availableUsers.length > 0 && (
+                {availableProfiles.length > 0 && (
                     <div className="relative mt-2" ref={assignDropdownRef}>
                       <button
                           onClick={() => setShowAssignDropdown(v => !v)}
@@ -304,7 +323,7 @@ export default function EditTicketModal({ ticket: initialTicket, isOpen, onClose
 
                       {showAssignDropdown && (
                           <div className="absolute z-10 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg py-1">
-                            {availableUsers.map((user) => (
+                            {availableProfiles.map((user) => (
                                 <button
                                     key={user.profile_id}
                                     onClick={() => {
@@ -316,7 +335,7 @@ export default function EditTicketModal({ ticket: initialTicket, isOpen, onClose
                                             ticket_id: t.ticket_id,
                                             profile_id: user.profile_id,
                                             assigned_date: new Date(),
-                                            Users: user
+                                            Profiles: user
                                           }
                                         ]
                                       } : t);
@@ -359,7 +378,7 @@ export default function EditTicketModal({ ticket: initialTicket, isOpen, onClose
                       >
                         None
                       </button>
-                      {users.map(u => (
+                      {profiles.map(u => (
                           <button
                               key={u.profile_id}
                               onClick={() => { setWatcher(u.profile_id); setEditing(null); }}
@@ -400,13 +419,13 @@ export default function EditTicketModal({ ticket: initialTicket, isOpen, onClose
                 <p className="text-xs text-gray-400 font-medium mb-1.5">Tags</p>
                 <div className="flex flex-wrap gap-1.5 items-center">
                   {selectedTags.map(tag_id => {
-                    const tag = availableTags.find(t => t.tag_id === tag_id);
+                    const tag = tags.find(t => t.tag_id === tag_id);
                     return (
                         <span
                             key={tag_id}
                             className={(colorClasses[tag?.color as keyof typeof colorClasses] ?? colorClasses.indigo) + " inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium"}
                         >
-                      {tag?.name}
+                          {tag?.name}
                           <span
                               className="cursor-pointer opacity-60 hover:opacity-100"
                               onClick={() => toggleTag(tag_id)}
@@ -423,7 +442,7 @@ export default function EditTicketModal({ ticket: initialTicket, isOpen, onClose
                 </div>
                 {editing === 'tags' && (
                     <div className="mt-2 flex flex-wrap gap-1.5">
-                      {availableTags.map(tag => {
+                      {tags.map(tag => {
                         const active = selectedTags.includes(tag.tag_id);
                         return (
                             <button

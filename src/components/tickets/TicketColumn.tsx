@@ -3,7 +3,7 @@
 import { useDroppable } from '@dnd-kit/core';
 import TicketCard from './TicketCard';
 import { Column } from './types';
-import { type Ticket } from "@/actions/ticketActions";
+import { type Ticket } from "./types";
 
 interface TicketColumnProps {
   column: Column;

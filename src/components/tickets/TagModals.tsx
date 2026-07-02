@@ -1,15 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import {selectTag, createTag, updateTag, softDeleteTag} from "@/actions/tagActions";
+import { Tag } from './types';
 
-// ── Types ─────────────────────────────────────────────────────────────────────
-
-export interface Tag {
-    id: string;
-    name: string;
-    description: string;
-    color: string;
-}
 
 // ── Color palette — each entry is the "base" hue used to derive pastel badge style ──
 
@@ -55,7 +49,7 @@ function CloseButton({ onClick }: { onClick: () => void }) {
 // ── Tag badge — pastel pill style matching the design ─────────────────────────
 
 function TagBadge({ tag }: { tag: Tag }) {
-    const { bg, text, border } = getPastelStyle(tag.color);
+    const { bg, text, border } = getPastelStyle(tag?.color ?? "#06B6D4");
     return (
         <span
             className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border"
@@ -113,7 +107,7 @@ interface TagListModalProps {
     onClose: () => void;
     onCreateTag: () => void;
     onEditTag: (tag: Tag) => void;
-    onDeleteTag: (tag: Tag) => void;
+    onDeleteTag: (tag_id: string) => void;
 }
 
 function TagListModal({ tags, onClose, onCreateTag, onEditTag, onDeleteTag }: TagListModalProps) {
@@ -121,15 +115,15 @@ function TagListModal({ tags, onClose, onCreateTag, onEditTag, onDeleteTag }: Ta
         <>
             <Backdrop onClick={onClose} />
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                <div className="bg-white rounded-xl shadow-2xl w-full max-w-xl">
+                <div className="bg-white rounded-xl shadow-2xl w-full max-w-xl min-h-[65vh] max-h-[65vh] flex flex-col overflow-hidden">
                     {/* Header */}
                     <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
                         <h2 className="text-base font-semibold text-gray-900">Tags</h2>
                         <CloseButton onClick={onClose} />
                     </div>
 
-                    {/* Table */}
-                    <div className="px-6 pt-3 pb-2">
+                    {/* Table Body Area */}
+                    <div className="flex-1 overflow-y-auto px-6 flex flex-col">
                         {/* Purple-tinted header — sticky, sits above the scroll area */}
                         <table className="w-full table-fixed">
                             <colgroup>
@@ -150,10 +144,7 @@ function TagListModal({ tags, onClose, onCreateTag, onEditTag, onDeleteTag }: Ta
                         </table>
 
                         {/* Scrollable rows */}
-                        <div
-                            className="overflow-y-auto mt-1 tag-scroll"
-                            style={{ maxHeight: "240px" }}
-                        >
+                        <div className="tag-scroll flex-1 overflow-y-auto">
                             <style>{`
                                 .tag-scroll::-webkit-scrollbar { width: 5px; }
                                 .tag-scroll::-webkit-scrollbar-track { background: #F5F3FF; border-radius: 99px; }
@@ -175,7 +166,7 @@ function TagListModal({ tags, onClose, onCreateTag, onEditTag, onDeleteTag }: Ta
                                         </tr>
                                     )}
                                     {tags.map((tag) => (
-                                        <tr key={tag.id} className="group hover:bg-indigo-50/50 transition-colors">
+                                        <tr key={tag.tag_id} className="group hover:bg-indigo-50/50 transition-colors">
                                             <td className="py-3 px-3 align-middle text-center">
                                                 <TagBadge tag={tag} />
                                             </td>
@@ -193,7 +184,7 @@ function TagListModal({ tags, onClose, onCreateTag, onEditTag, onDeleteTag }: Ta
                                                         </svg>
                                                     </button>
                                                     <button
-                                                        onClick={() => onDeleteTag(tag)}
+                                                        onClick={() => onDeleteTag(tag.tag_id)}
                                                         className="text-red-400 hover:text-red-600 transition-colors"
                                                         aria-label="Delete tag"
                                                     >
@@ -213,11 +204,14 @@ function TagListModal({ tags, onClose, onCreateTag, onEditTag, onDeleteTag }: Ta
                         </div>
                     </div>
 
+                    {/* Footer Divider */}
+                    <div className="h-px bg-gray-100 shrink-0" />
+
                     {/* Footer */}
-                    <div className="px-6 py-4 border-t border-gray-100 flex justify-end">
+                    <div className="px-6 py-4 flex justify-end shrink-0 bg-gray-50/50">
                         <button
                             onClick={onCreateTag}
-                            className="flex items-center gap-1.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-lg transition-colors"
+                            className="flex items-center gap-1.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-lg transition-colors shadow-sm"
                         >
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round">
                                 <line x1="12" y1="5" x2="12" y2="19" />
@@ -238,17 +232,17 @@ interface TagFormModalProps {
     mode: "create" | "edit";
     initial?: Tag;
     onClose: () => void;
-    onSave: (tag: Omit<Tag, "id"> & { id?: string }) => void;
+    onSubmit: (name:string, description?:string, color?:string, tag_id?:string) => void;
 }
 
-function TagFormModal({ mode, initial, onClose, onSave }: TagFormModalProps) {
+function TagFormModal({ mode, initial, onClose, onSubmit }: TagFormModalProps) {
     const [name, setName] = useState(initial?.name ?? "");
     const [description, setDescription] = useState(initial?.description ?? "");
     const [color, setColor] = useState(initial?.color ?? "#3B82F6");
 
-    function handleSave() {
-        if (!name.trim()) return;
-        onSave({ id: initial?.id, name: name.trim(), description: description.trim(), color });
+    function handleSubmit()
+    {
+        onSubmit(name,description,color,initial?.tag_id)
     }
 
     return (
@@ -303,7 +297,7 @@ function TagFormModal({ mode, initial, onClose, onSave }: TagFormModalProps) {
                     {/* Footer */}
                     <div className="px-6 py-4 border-t border-gray-100 flex justify-end">
                         <button
-                            onClick={handleSave}
+                            onClick={handleSubmit}
                             disabled={!name.trim()}
                             className="text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed px-5 py-2 rounded-lg transition-colors"
                         >
@@ -321,10 +315,15 @@ function TagFormModal({ mode, initial, onClose, onSave }: TagFormModalProps) {
 interface DeleteTagModalProps {
     tag: Tag;
     onClose: () => void;
-    onConfirm: () => void;
+    onConfirm: (tag_id:string) => void;
 }
 
 function DeleteTagModal({ tag, onClose, onConfirm }: DeleteTagModalProps) {
+
+    function handleDelete(){
+        onConfirm(tag.tag_id)
+    }
+
     return (
         <>
             <Backdrop onClick={onClose} />
@@ -358,7 +357,7 @@ function DeleteTagModal({ tag, onClose, onConfirm }: DeleteTagModalProps) {
                             Cancel
                         </button>
                         <button
-                            onClick={onConfirm}
+                            onClick={handleDelete}
                             className="text-sm font-semibold text-white bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg transition-colors"
                         >
                             Yes, Delete
@@ -377,16 +376,18 @@ type TagModalView = "list" | "create" | "edit" | "delete" | null;
 interface TagManagerProps {
     isOpen: boolean;
     onClose: () => void;
+    onSave: (
+            tag_id: string,
+            name: string,
+            description?: string | null,
+            color?: string | null,
+            ) => void;
+    onDelete: (tag_id: string) => void;
+    tags : Tag[]
 }
 
-export function TagManager({ isOpen, onClose }: TagManagerProps) {
+export function TagManager({ isOpen, onClose, onSave, onDelete, tags }: TagManagerProps) {
     const [view, setView] = useState<TagModalView>("list");
-    const [tags, setTags] = useState<Tag[]>([
-        { id: "1", name: "Production", description: "Used for critical infrastructure and customer-facing assets.", color: "#8B5CF6" },
-        { id: "2", name: "Dev-Stage", description: "Internal development environments and experimental builds.", color: "#22C55E" },
-        { id: "3", name: "Urgent", description: "Security patches and high-vulnerability items awaiting triage.", color: "#F97316" },
-        { id: "4", name: "Archived", description: "Deprecated resources kept for historical compliance audits.", color: "#6366F1" },
-    ]);
     const [selectedTag, setSelectedTag] = useState<Tag | null>(null);
 
     if (!isOpen) return null;
@@ -402,28 +403,20 @@ export function TagManager({ isOpen, onClose }: TagManagerProps) {
         setView("edit");
     }
 
-    function handleDeleteTag(tag: Tag) {
-        setSelectedTag(tag);
-        setView("delete");
-    }
-
-    function handleSaveTag(data: Omit<Tag, "id"> & { id?: string }) {
-        if (data.id) {
-            // Edit
-            setTags((prev) => prev.map((t) => t.id === data.id ? { ...t, ...data } as Tag : t));
-        } else {
-            // Create
-            const newTag: Tag = { ...data, id: Date.now().toString() };
-            setTags((prev) => [...prev, newTag]);
-        }
+    function handleSaveTag(name:string, description?:string, color?:string, tag_id?:string) {
+        if (!name.trim()) return;
+        onSave(
+            name.trim(),
+            description?.trim() ?? "",
+            color,
+            tag_id ?? "",
+        );
         setView("list");
         setSelectedTag(null);
     }
 
-    function handleConfirmDelete() {
-        if (selectedTag) {
-            setTags((prev) => prev.filter((t) => t.id !== selectedTag.id));
-        }
+    function handleDeleteTag(tag_id:string) {
+        onDelete(tag_id);
         setView("list");
         setSelectedTag(null);
     }
@@ -445,7 +438,7 @@ export function TagManager({ isOpen, onClose }: TagManagerProps) {
             <TagFormModal
                 mode="create"
                 onClose={() => setView("list")}
-                onSave={handleSaveTag}
+                onSubmit={handleSaveTag}
             />
         );
     }
@@ -456,7 +449,7 @@ export function TagManager({ isOpen, onClose }: TagManagerProps) {
                 mode="edit"
                 initial={selectedTag}
                 onClose={() => setView("list")}
-                onSave={handleSaveTag}
+                onSubmit={handleSaveTag}
             />
         );
     }
@@ -466,7 +459,7 @@ export function TagManager({ isOpen, onClose }: TagManagerProps) {
             <DeleteTagModal
                 tag={selectedTag}
                 onClose={() => setView("list")}
-                onConfirm={handleConfirmDelete}
+                onConfirm={handleDeleteTag}
             />
         );
     }

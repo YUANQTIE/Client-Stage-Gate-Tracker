@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import {Prisma, status, CommentParentType, ImageParentType } from "@/lib/generated/prisma";
+import {Profile, TicketAssigned, TicketSubtask, TicketTag} from "@/components/tickets/types";
 
 export type EntityFilterStatus = 'active' | 'deleted' | 'all';
 
@@ -12,10 +13,29 @@ export async function selectTicket() {
             where: { is_deleted: false },
             include: {
                 TicketTags: true,
-                TicketAssigned: true,
                 TicketSubtasks_TicketSubtasks_ticket_idToTickets: true,
-                Users_Tickets_assigner_idToUsers: true,
-                Users_Tickets_watcher_idToUsers: true,
+                TicketAssigned: {
+                    include: {
+                        Profiles: {
+                            select: {
+                                first_name:true,
+                                last_name:true
+                            }
+                        }
+                    }
+                },
+                Profiles_Tickets_assigner_idToProfiles: {
+                    select: {
+                        first_name:true,
+                        last_name:true
+                    }
+                },
+                Profiles_Tickets_watcher_idToProfiles: {
+                    select: {
+                        first_name:true,
+                        last_name:true
+                    }
+                }
             },
         });
     } catch (error) {
@@ -24,41 +44,127 @@ export async function selectTicket() {
     }
 }
 
-// deadlineDate is required, so it MUST go before description, startDate, and endDate
-export async function createTicket(
-    workflowId: string,
-    name: string,
-    deadlineDate: Date,
-    description?: string | null,
-    startDate?: Date | null,
-    endDate?: Date | null
-) {
-    try {
-        const newTicket = await prisma.tickets.create({
-            data: {
-                name,
-                description,
-                start_date: startDate,
-                end_date: endDate,
-                deadline_date: deadlineDate,
-                workflow_id: workflowId,
+export async function createTicket({
+                                       workflow_id,
+                                       name,
+                                       deadline_date,
+                                       status,
+                                       watcher_id,
+                                       TicketAssigned,
+                                       tagIds,
+                                       description,
+                                       start_date,
+                                       end_date,
+                                   }: {
+    workflow_id: string | null;
+    name: string;
+    deadline_date: Date;
+    status: status;
+    watcher_id: string | null;
+    TicketAssigned: string[] | null;
+    tagIds: string[] | null;
+    description?: string | null;
+    start_date?: Date | null;
+    end_date?: Date | null;
+}) {
+
+    console.log(tagIds)
+
+    return prisma.tickets.create({
+        data: {
+            name,
+            deadline_date,
+            status: status,
+            workflow_id: workflow_id ?? null,
+            watcher_id: watcher_id ?? null,
+            description: description ?? null,
+            start_date: start_date ?? null,
+            end_date: end_date ?? null,
+
+            TicketAssigned: {
+                create: TicketAssigned?.map((id) => ({
+                    profile_id: id,
+                })),
             },
-            include: {
-                TicketTags: true,
-                TicketAssigned: true,
-                TicketSubtasks_TicketSubtasks_ticket_idToTickets: true,
-                Users_Tickets_assigner_idToUsers: true,
-                Users_Tickets_watcher_idToUsers: true,
-            }
-        });
-        return { success: true, data: newTicket };
-    } catch (error) {
-        console.error("Create ticket error:", error);
-        return { success: false, error: "Failed to create ticket" };
-    }
+            TicketTags: {
+                create: tagIds?.map((id): { tag_id: string } => ({
+                    tag_id: id,
+                }))
+                // create: tagIds?.map((id) => ({
+                //     tag_id: id,
+                // })),
+            },
+        },
+        include: {
+            TicketTags: true,
+            TicketAssigned: true,
+            Profiles_Tickets_assigner_idToProfiles: true,
+            Profiles_Tickets_watcher_idToProfiles: true,
+        },
+    });
 }
 
-export async function ticketUpdateStatus(ticketId: string, status: status) {
+export async function updateTicket({
+                                       ticket_id,
+                                       workflow_id,
+                                       name,
+                                       deadline_date,
+                                       status,
+                                       watcher_id,
+                                       TicketAssigned,
+                                       tagIds,
+                                       description,
+                                       start_date,
+                                       end_date,
+                                   }: {
+    ticket_id: string;
+    workflow_id: string | null;
+    name: string;
+    deadline_date: Date;
+    status: status;
+    watcher_id: string | null;
+    TicketAssigned: string[];
+    tagIds: string[];
+    description?: string | null;
+    start_date?: Date | null;
+    end_date?: Date | null;
+}) {
+    return prisma.tickets.update({
+        where: { ticket_id },
+        data: {
+            name,
+            deadline_date,
+            status: status,
+            workflow_id: workflow_id ?? null,
+            watcher_id: watcher_id ?? null,
+
+            description: description ?? null,
+            start_date: start_date ?? null,
+            end_date: end_date ?? null,
+
+            TicketAssigned: {
+                deleteMany: {},
+                create: TicketAssigned.map((profile_id) => ({
+                    profile_id,
+                })),
+            },
+            TicketTags: {
+                deleteMany: {},
+                create: tagIds.map((tag_id) => ({
+                    tag_id,
+                })),
+            },
+        },
+        include: {
+            TicketTags: true,
+            TicketAssigned: true,
+            Profiles_Tickets_assigner_idToProfiles: true,
+            Profiles_Tickets_watcher_idToProfiles: true,
+        },
+    });
+}
+
+export async function updateTicketStatus(ticketId: string, status: status) {
     return prisma.tickets.update({
         where: { ticket_id: ticketId },
         data: { status },
@@ -66,8 +172,8 @@ export async function ticketUpdateStatus(ticketId: string, status: status) {
             TicketTags: true,
             TicketAssigned: true,
             TicketSubtasks_TicketSubtasks_ticket_idToTickets: true,
-            Users_Tickets_assigner_idToUsers: true,
-            Users_Tickets_watcher_idToUsers: true,
+            Profiles_Tickets_assigner_idToProfiles: true,
+            Profiles_Tickets_watcher_idToProfiles: true,
         },
     });
 }
@@ -79,7 +185,7 @@ export async function getSubtasksByTicketId(ticketId: string, status: string = '
                 ticket_id: ticketId,
             },
             orderBy: {
-                subtask_id: 'asc', // Safe creation-fallback sort field
+                subtask_id: 'asc',
             },
         });
         return { success: true, data: subtasks };

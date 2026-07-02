@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Prisma } from "@/lib/generated/prisma";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Profile, Tag, TicketAssigned } from './types';
 
 import { selectTag } from "@/actions/tagActions";
 import { selectProfile } from "@/actions/profileActions";
@@ -25,14 +25,6 @@ function ChevronDownIcon() {
 		</svg>
 	);
 }
-function ProfileIcon() {
-	return (
-		<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="text-gray-400">
-			<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-			<circle cx="12" cy="7" r="4" />
-		</svg>
-	);
-}
 function EyeIcon() {
 	return (
 		<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="text-gray-400">
@@ -44,49 +36,48 @@ function EyeIcon() {
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-// Updated to cleanly accept the form values in a single flat structure
 interface CreateTicketModalProps {
 	isOpen: boolean;
 	onClose: () => void;
-	onCreateTicket: (
-		name: string,
-		deadlineDate: Date,
-		description?: string | null,
-		startDate?: Date | null,
-		endDate?: Date | null
-	) => Promise<void>;
+	onCreateTicket: (data: {
+		name: string;
+		deadline_date: Date;
+		watcher_id?: string | null;
+		TicketAssigned?: string[] | null;
+		tagIds?: string[] | null;
+		description?: string | null;
+		start_date?: Date | null;
+		end_date?: Date | null;
+	}) => Promise<void>;
+	tags: Tag[];
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function CreateTicketModal({ isOpen, onClose, onCreateTicket }: CreateTicketModalProps) {
+export default function CreateTicketModal({ isOpen, onClose, onCreateTicket, tags }: CreateTicketModalProps) {
 	const [title, setTitle] = useState('');
 	const [description, setDescription] = useState('');
 	const [deadline, setDeadline] = useState('');
 	const today = new Date().toISOString().split('T')[0];
 
-	const [tags, setTags] = useState<string[]>([]);
+	const [selectedTags, setSelectedTags] = useState<string[]>([]);
 	const [tagsOpen, setTagsOpen] = useState(false);
 	const tagsRef = useRef<HTMLDivElement>(null);
 
-	const [profiles, setProfiles] = useState<Prisma.ProfilesGetPayload<{}>[]>([]);
+	const [profiles, setProfiles] = useState<Profile[]>([]);
+	const [assignedOpen, setAssignedOpen] = useState(false);
 	const [assignedIds, setAssignedIds] = useState<string[]>([]);
 	const [watcherId, setWatcherId] = useState('');
-	const [availableTags, setAvailableTags] = useState<Prisma.TagsGetPayload<{}>[]>([]);
-	const [assignedOpen, setAssignedOpen] = useState(false);
 	const assignedRef = useRef<HTMLDivElement>(null);
 
-	/** Image attachment — not yet passed to onCreateTicket; see TODO in handleSubmit */
 	const [imageFile, setImageFile] = useState<File | null>(null);
 	const [imagePreview, setImagePreview] = useState<string | null>(null);
 
-	/** API fields — only relevant when the "API" tag is selected */
 	const [apiMethod, setApiMethod] = useState('GET');
 	const [apiRoute, setApiRoute] = useState('');
 
 	useEffect(() => {
 		selectProfile().then(setProfiles);
-		selectTag().then(setAvailableTags);
 
 		function handleClickOutside(e: MouseEvent) {
 			if (tagsRef.current && !tagsRef.current.contains(e.target as Node)) {
@@ -101,7 +92,7 @@ export default function CreateTicketModal({ isOpen, onClose, onCreateTicket }: C
 	}, []);
 
 	function toggleTag(tagId: string) {
-		setTags(prev => prev.includes(tagId) ? prev.filter(t => t !== tagId) : [...prev, tagId]);
+		setSelectedTags(prev => prev.includes(tagId) ? prev.filter(t => t !== tagId) : [...prev, tagId]);
 	}
 
 	function toggleAssigned(profileId: string) {
@@ -112,8 +103,8 @@ export default function CreateTicketModal({ isOpen, onClose, onCreateTicket }: C
 		);
 	}
 
-	const isApiTagSelected = tags.some(
-		tagId => availableTags.find(t => t.tag_id === tagId)?.name?.toLowerCase() === 'api'
+	const isApiTagSelected = selectedTags.some(
+		tagId => tags.find(t => t.tag_id === tagId)?.name?.toLowerCase() === 'api'
 	);
 
 	function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -132,21 +123,20 @@ export default function CreateTicketModal({ isOpen, onClose, onCreateTicket }: C
 		e.preventDefault();
 		if (!title.trim()) return;
 
-		// TODO: upload imageFile to backend storage before calling onCreateTicket, then pass returned URL
-		// TODO: pass apiMethod and apiRoute to backend when isApiTagSelected is true
-		onCreateTicket(
-			title.trim(),                                 // 1. name (string)
-			deadline ? new Date(deadline) : new Date(),   // 2. deadlineDate (Date - required!)
-			description.trim() || null,                  // 3. description (string | null)
-			null,                                         // 4. startDate (null)
-			null                                          // 5. endDate (null)
-		);
+		onCreateTicket({
+			name: title.trim(),
+			deadline_date: deadline ? new Date(deadline) : new Date(),
+			watcher_id: watcherId || null,
+			TicketAssigned: [], // Replaced trailing ? with short-circuit fallback
+			tagIds: selectedTags || [],        // Replaced trailing ? with short-circuit fallback
+			description: description.trim() || null,
+		});
 
 		setTitle('');
 		setDescription('');
 		setDeadline('');
 		setWatcherId('');
-		setTags([]);
+		setSelectedTags([]);
 		setAssignedIds([]);
 		setImageFile(null);
 		setImagePreview(null);
@@ -177,7 +167,7 @@ export default function CreateTicketModal({ isOpen, onClose, onCreateTicket }: C
 			className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
 			onClick={handleBackdropClick}
 		>
-			<div className="bg-white rounded-2xl w-full max-w-[612px] max-h-[92vh] flex flex-col shadow-2xl">
+			<div className="bg-white rounded-2xl w-full max-w-153 max-h-[92vh] flex flex-col shadow-2xl">
 				{/* Modal header */}
 				<div className="flex items-center justify-between px-6 pt-6 pb-5 shrink-0">
 					<h2 className="text-lg font-semibold text-gray-900">New Ticket</h2>
@@ -231,7 +221,7 @@ export default function CreateTicketModal({ isOpen, onClose, onCreateTicket }: C
 								<button
 									type="button"
 									onClick={() => setAssignedOpen(o => !o)}
-									className="w-full flex items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent min-h-[38px]"
+									className="w-full flex items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent min-h-9.5"
 								>
 									<div className="flex flex-wrap gap-1 flex-1">
 										{assignedIds.length === 0 ? (
@@ -319,14 +309,14 @@ export default function CreateTicketModal({ isOpen, onClose, onCreateTicket }: C
 								<button
 									type="button"
 									onClick={() => setTagsOpen(o => !o)}
-									className="w-full flex items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent min-h-[38px]"
+									className="w-full flex items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent min-h-9.5"
 								>
 									<div className="flex flex-wrap gap-1 flex-1">
-										{tags.length === 0 ? (
+										{selectedTags.length === 0 ? (
 											<span className="text-gray-400">Select tags...</span>
 										) : (
-											tags.map(tag_id => {
-												const tag = availableTags.find(t => t.tag_id === tag_id);
+											selectedTags.map(tag_id => {
+												const tag = tags.find(t => t.tag_id === tag_id);
 												return (
 													<span
 														key={tag_id}
@@ -352,18 +342,18 @@ export default function CreateTicketModal({ isOpen, onClose, onCreateTicket }: C
 
 								{tagsOpen && (
 									<div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
-										{availableTags.map(tag => (
+										{tags.map(tag => (
 											<div
 												key={tag.tag_id}
 												onClick={() => toggleTag(tag.tag_id)}
 												className="flex items-center gap-2.5 px-3.5 py-2.5 text-sm cursor-pointer hover:bg-gray-50 text-gray-700"
 											>
 												<div className={`w-4 h-4 rounded flex items-center justify-center border transition-colors ${
-													tags.includes(tag.tag_id)
+													selectedTags.includes(tag.tag_id)
 														? 'bg-indigo-600 border-indigo-600'
 														: 'border-gray-300'
 												}`}>
-													{tags.includes(tag.tag_id) && (
+													{selectedTags.includes(tag.tag_id) && (
 														<svg width="10" height="10" viewBox="0 0 12 12" fill="none">
 															<polyline points="2 6 5 9 10 3" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
 														</svg>
@@ -410,7 +400,7 @@ export default function CreateTicketModal({ isOpen, onClose, onCreateTicket }: C
 						</label>
 						{imagePreview && (
 							<div className="relative inline-block mt-1">
-								<img src={imagePreview} alt="Preview" className="h-20 w-auto rounded-lg border border-gray-200 object-cover" />
+								<img src={imagePreview} alt="Preview" className="h-20 w-auto rounded-lg border border-gray-200 object-cover"/>
 								<button
 									type="button"
 									onClick={() => { setImageFile(null); setImagePreview(null); }}

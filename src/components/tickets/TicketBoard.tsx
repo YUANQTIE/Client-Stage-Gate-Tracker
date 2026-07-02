@@ -11,32 +11,26 @@ import {
     useSensor,
     useSensors,
 } from "@dnd-kit/core";
-
 import { TicketCardContent } from "./TicketCard";
 import TicketColumn from "./TicketColumn";
 import CreateTicketModal from "./CreateTicketModal";
 import EditTicketModal from "./EditTicketModal";
 import TopNav from "@/components/layout/TopNav";
-import { COLUMNS } from "./types";
-import { TagManager } from "./TagModals";
-
-// Import your custom generated Prisma types and enums
-import { Prisma, status as TicketStatus } from "@/lib/generated/prisma";
+import { COLUMNS, Ticket, Tag, TicketAssigned } from "./types";
+import { TagManager} from "./TagModals";
+import { status as TicketStatus } from "@/lib/generated/prisma";
 import {
     selectTicket,
-    ticketUpdateStatus,
+    updateTicketStatus,
     createTicket,
     cascadeSoftDeleteTicket
 } from "@/actions/ticketActions";
-
-// ── Define the strict Ticket Type using Prisma's payload generator ──────────
-type Ticket = Prisma.TicketsGetPayload<{
-    include: {
-        TicketTags: true;
-        TicketAssigned: true;
-        TicketSubtasks_TicketSubtasks_ticket_idToTickets: true;
-    }
-}>;
+import {
+    selectTag,
+    updateTag,
+    createTag,
+    softDeleteTag
+} from "@/actions/tagActions";
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 
@@ -93,6 +87,8 @@ export default function TicketBoard({
                                         workflowId,
                                     }: TicketBoardProps) {
     const [tickets, setTickets] = useState<Ticket[]>([]);
+    const [tags, setTags] = useState<Tag[]>([]);
+
     const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [modalOpen, setModalOpen] = useState(false);
@@ -116,6 +112,24 @@ export default function TicketBoard({
     useEffect(() => {
         let isMounted = true;
 
+        if (isMounted) {
+            selectTag()
+                .then((data) => {
+                    if (isMounted) {
+                        setTags(data as Tag[]);
+                    }
+                })
+                .catch((err) => console.error("Failed to fetch tags:", err));
+        }
+
+        return () => {
+            isMounted = false; // Prevents updating state if component unmounts mid-fetch
+        };
+    }, []);
+
+    useEffect(() => {
+        let isMounted = true;
+
         async function fetchBot() {
             try {
                 setIsLoading(true);
@@ -123,7 +137,7 @@ export default function TicketBoard({
 
                 // Only update state if the user is still looking at this page!
                 if (isMounted) {
-                    setTickets(data as Ticket[]);
+                    setTickets(data);
                 }
             } catch (error) {
                 console.error("Error loading tickets from database:", error);
@@ -149,28 +163,47 @@ export default function TicketBoard({
     }
 
     // Pass down the raw parameter fields that your modal form fields will gather
-    async function handleCreateTicket(
-        name: string,
-        deadlineDate: Date,
-        description?: string | null,
-        startDate?: Date | null,
-        endDate?: Date | null
-    ) {
+    async function handleCreateTicket({
+                                          name,
+                                          deadline_date,
+                                          watcher_id,
+                                          TicketAssigned,
+                                          tagIds,
+                                          description,
+                                          start_date,
+                                          end_date,
+                                      }: {
+        // Declare the types here in a separate block!
+        name: string;
+        deadline_date: Date;
+        watcher_id?: string | null;
+        TicketAssigned?: string[] | null;
+        tagIds?: string[] | null;
+        description?: string | null;
+        start_date?: Date | null;
+        end_date?: Date | null;
+    }) {
         const previousTickets = tickets;
         try {
             // Clean matching call setup with deadlineDate passed as the 3rd argument
             const result = await createTicket(
-                workflowId,
-                name,
-                deadlineDate,
-                description,
-                startDate,
-                endDate
+                {
+                    workflow_id: "cddde38b-1a89-440a-9d39-6bf12cfb3d05",
+                    name: name,
+                    deadline_date: deadline_date,
+                    status: TicketStatus.PENDING,
+                    watcher_id: watcher_id ?? null,
+                    TicketAssigned: TicketAssigned ?? [],
+                    tagIds: tagIds ?? [],
+                    description: description ?? null,
+                    start_date: start_date ?? null,
+                    end_date: end_date ?? null
+                }
             );
 
-            if (result.success && result.data) {
+            if (result) {
                 setTickets((prev) =>
-                    [...prev, result.data as Ticket]);
+                    [...prev, result as Ticket]);
                 setModalOpen(false);
             }
         } catch (error) {
@@ -187,6 +220,47 @@ export default function TicketBoard({
             await cascadeSoftDeleteTicket(ticketId);
         } catch (error) {
             setTickets(previousTickets);
+            console.error("Failed to delete ticket:", error);
+        }
+    }
+
+    async function handleSaveTag(
+        tag_id: string,
+        name: string,
+        description?: string | null,
+        color?: string | null,
+    )
+    {
+        if (tag_id) {
+            // Edit
+            const result = await updateTag(tag_id, name, description, color);
+
+            if (result.name)
+                setTags((prev) => prev.map((t) => t.tag_id === tag_id ? { ...t, ...{name, description, color} } as Tag : t));
+        } else {
+            // Create
+            const result = await createTag(name, description, color);
+
+            if (result.success)
+                setTags((prev) => [...prev, {
+                    tag_id:result?.data?.tag_id ?? "",
+                    name:name,
+                    description:description,
+                    color:color,
+                    deleted_at:null,
+                    is_deleted:false
+                } as Tag]);
+        }
+    }
+
+    async function handleDeleteTag(tagId: string) {
+        const previousTag = tags;
+        try {
+            setTags((prev) =>
+                prev.filter((t) => t.tag_id !== tagId));
+            await softDeleteTag(tagId);
+        } catch (error) {
+            setTags(previousTag);
             console.error("Failed to delete ticket:", error);
         }
     }
@@ -211,7 +285,7 @@ export default function TicketBoard({
             );
 
             try {
-                await ticketUpdateStatus(active.id as string, newStatus);
+                await updateTicketStatus(active.id as string, newStatus);
             } catch (error) {
                 setTickets(previousTickets);
                 console.error("Failed to update ticket status:", error);
@@ -298,17 +372,22 @@ export default function TicketBoard({
                 isOpen={slideOverOpen}
                 onClose={() => setSlideOverOpen(false)}
                 onUpdate={(updated) => setTickets((prev) => prev.map((t) => t.ticket_id === updated.ticket_id ? (updated as Ticket) : t))}
+                tags={tags}
             />
 
             <CreateTicketModal
                 isOpen={modalOpen}
                 onClose={() => setModalOpen(false)}
                 onCreateTicket={handleCreateTicket}
+                tags={tags}
             />
 
             <TagManager
                 isOpen={tagManagerOpen}
                 onClose={() => setTagManagerOpen(false)}
+                onSave={handleSaveTag}
+                onDelete={handleDeleteTag}
+                tags={tags}
             />
         </div>
     );

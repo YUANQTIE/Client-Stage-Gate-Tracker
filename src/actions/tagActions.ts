@@ -9,7 +9,11 @@ import {prisma} from "@/lib/prisma";
  * Returns a promise that resolves to an array of all available tag objects.
  */
 export async function selectTag() {
-    return prisma.tags.findMany();
+    return prisma.tags.findMany(
+        {
+            where: { is_deleted: false },
+            orderBy: {name: 'asc'},
+        },);
 }
 
 export async function createTag(
@@ -32,13 +36,13 @@ export async function createTag(
     }
 }
 
-export async function tagUpdate(id: string, name:string, description?: string, color?: string) {
+export async function updateTag(id: string, name:string, description?: string | null, color?: string | null) {
     return prisma.tags.update({
         where: { tag_id: id },
         data: {
             name:name,
-            description:description,
-            color:color
+            description:description ?? null,
+            color:color ?? null
         },
     });
 }
