@@ -107,7 +107,7 @@ export function WorkflowsList({ workflows, moduleId, onUpdateWorkflows }: Workfl
             </div>
 
             <div className="flex items-center gap-4">
-              {/* Tags */}
+              {/* Tags
               <div className="flex gap-1.5">
                 {workflow.tags.map((tag) => (
                   <span
@@ -117,7 +117,7 @@ export function WorkflowsList({ workflows, moduleId, onUpdateWorkflows }: Workfl
                     {tag}
                   </span>
                 ))}
-              </div>
+              </div> */}
 
               {/* Ticket Count */}
               <div className="flex items-center gap-1.5 min-w-[90px]">
@@ -222,7 +222,7 @@ export function WorkflowsList({ workflows, moduleId, onUpdateWorkflows }: Workfl
                 />
               </div>
 
-              <div>
+              {/* <div>
                 <label className="block text-xs font-semibold text-[#475569] mb-1.5">
                   Tags (comma-separated)
                 </label>
@@ -236,7 +236,7 @@ export function WorkflowsList({ workflows, moduleId, onUpdateWorkflows }: Workfl
                 <p className="text-xs text-[#94A3B8] mt-1.5">
                   Separate tags with commas
                 </p>
-              </div>
+              </div> */}
             </div>
 
             <div className="flex justify-between items-center mt-6 pt-4 border-t border-[#F1F5F9]">
