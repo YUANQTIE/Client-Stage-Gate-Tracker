@@ -8,7 +8,9 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { PasswordInput } from "@/components/auth/PasswordInput";
 import { ProfileType } from "@/types";
+import { AuthResponse } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
+import { getProfileByEmail } from "@/actions/profileActions";
 
 export function SignupForm() {
   const router = useRouter();
@@ -25,8 +27,29 @@ export function SignupForm() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  async function userSignUp(user: ProfileType, password: string) {
-    return await supabase.auth.signUp({
+  async function userSignUp(
+    user: ProfileType,
+    password: string,
+  ): Promise<{
+    signupError: string | null;
+    data: AuthResponse["data"] | null;
+  }> {
+    //check if email is already linked to an existing user
+    const { success, data: existingProfile } = await getProfileByEmail(
+      user.email,
+    );
+
+    //if email is linked to an existing user
+    //return error message and null user data
+    if (success && existingProfile) {
+      return {
+        signupError: "An account with this email already exists.",
+        data: null,
+      };
+    }
+
+    //else, try signing up the user
+    const res = await supabase.auth.signUp({
       email: user.email,
       password: password,
       options: {
@@ -42,13 +65,22 @@ export function SignupForm() {
         emailRedirectTo: "http://localhost:3000/signup-callback",
       },
     });
+
+    //check if user was successfully signed up
+    if (!res.data.user)
+      return {
+        signupError: "Account could not be registered, please try again.",
+        data: null,
+      };
+
+    return { signupError: null, data: res.data };
   }
 
-  const handleSignUp = async (e: React.BaseSyntheticEvent) => {
-    setError(null);
-    setLoading(false);
-    e.preventDefault();
+  function isNumeric(value: string): boolean {
+    return /^\d+$/.test(value);
+  }
 
+  function validate() {
     // basic validation
     const missingFields: string[] = [];
 
@@ -66,19 +98,34 @@ export function SignupForm() {
 
     if (missingFields.length >= 3) {
       setError("Multiple fields are missing.");
-      return;
+      return true;
     } else if (missingFields.length === 2) {
       setError(
         `Please input your ${missingFields[0]} and ${missingFields[1]}.`,
       );
-      return;
+      return true;
     } else if (missingFields.length === 1) {
       setError(`Please input your ${missingFields[0]}.`);
-      return;
+      return true;
     } else if (passwordMismatch) {
       setError("Password and confirmed password do not match.");
-      return;
+      return true;
+    } else if (!isNumeric(phone)) {
+      setError("Phone number should only contain numbers.");
+      return true;
     }
+    return false;
+  }
+
+  const handleSignUp = async (e: React.BaseSyntheticEvent) => {
+    setError(null);
+    setLoading(false);
+    e.preventDefault();
+
+    //check for errors before
+    //attempting signup
+    const hasError = validate();
+    if (hasError) return;
 
     setLoading(true);
 
@@ -96,24 +143,28 @@ export function SignupForm() {
       deleted_at: null,
     };
 
-    const { data, error: signUpError } = await userSignUp(user, password);
+    const { signupError, data } = await userSignUp(user, password);
 
-    //catch the sign in error
-    if (signUpError) {
-      setError(signUpError.message);
+    //catch the sign up error
+    if (signupError) {
+      setError(signupError);
       setLoading(false);
       return;
     }
 
     //only triggers if CONFIRM EMAIL option in Supabase is off (shud be on by default tho)
-    if (data.session) {
+    if (data?.session) {
       router.push("/login");
       router.refresh();
-    } else {
+    }
+    //only triggers if user was successfully registered
+    else if (data?.user) {
       setError(
         "Account created! Check your email to confirm your account before logging in.",
       );
-      console.log(data);
+      setLoading(false);
+    } else {
+      setError("Something went wrong. Please try again.");
       setLoading(false);
     }
   };
