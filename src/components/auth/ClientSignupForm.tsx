@@ -8,7 +8,9 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { PasswordInput } from "@/components/auth/PasswordInput";
 import { ClientType, ProfileType } from "@/types";
+import { AuthResponse } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
+import { getProfileByEmail } from "@/actions/profileActions";
 import {
   clientSelectByNameTin,
   clientCreate,
@@ -96,8 +98,29 @@ export function ClientSignupForm() {
     return e;
   }
 
-  async function userSignUp(user: ProfileType, password: string) {
-    return await supabase.auth.signUp({
+  async function userSignUp(
+    user: ProfileType,
+    password: string,
+  ): Promise<{
+    signupError: string | null;
+    data: AuthResponse["data"] | null;
+  }> {
+    //check if email is already linked to an existing user
+    const { success, data: existingProfile } = await getProfileByEmail(
+      user.email,
+    );
+
+    //if email is linked to an existing user
+    //return error message and null user data
+    if (success && existingProfile) {
+      return {
+        signupError: "An account with this email already exists.",
+        data: null,
+      };
+    }
+
+    //else, try signing up the user
+    const res = await supabase.auth.signUp({
       email: user.email,
       password: password,
       options: {
@@ -114,9 +137,17 @@ export function ClientSignupForm() {
         emailRedirectTo: "http://localhost:3000/signup-callback",
       },
     });
+    //check if user was successfully signed up
+    if (!res.data.user)
+      return {
+        signupError: "Account could not be registered, please try again.",
+        data: null,
+      };
+
+    return { signupError: null, data: res.data };
   }
 
-  const handleSignUp = async (e: React.BaseSyntheticEvent) => {
+  async function handleSignUp(e: React.BaseSyntheticEvent) {
     setLoading(false);
     e.preventDefault();
     setApiError(null);
@@ -181,30 +212,44 @@ export function ClientSignupForm() {
       deleted_at: null,
     };
 
-    const { data, error: signUpError } = await userSignUp(
-      user,
-      fields.password,
-    );
+    const { data, signupError } = await userSignUp(user, fields.password);
 
     //catch the sign in error
-    if (signUpError) {
-      setApiError(signUpError.message);
+    if (signupError) {
+      setApiError(signupError);
       if (client) await clientDeleteByID(client.client_id);
       setLoading(false);
       return;
     }
 
     //only triggers if CONFIRM EMAIL option in Supabase is off (shud be on by default tho)
-    if (data.session) {
+    if (data?.session) {
       router.push("/login");
       router.refresh();
-    } else {
+    } else if (data?.user) {
       setApiError(
         "Account created! Check your email to confirm your account before logging in.",
       );
       setLoading(false);
+    } else {
+      setApiError("Something went wrong. Please try again.");
+      setLoading(false);
     }
-  };
+  }
+
+  async function resendConfirmationEmail(email: string) {
+    //resend and check for errors
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email: email,
+      options: {
+        emailRedirectTo: "http://localhost:3000/signup-callback",
+      },
+    });
+
+    if (error) return { error: error.message };
+    return { error: null };
+  }
 
   function errClass(key: keyof Fields) {
     return errors[key] ? "border-red-400 focus:ring-red-400" : "";
